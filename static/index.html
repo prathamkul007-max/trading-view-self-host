@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Orazio</title>
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0d1117; font-family: sans-serif; color: #e6edf3; }
+  header { padding: 10px 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 16px; margin: 0; }
+  select, button, input { background: #161b22; color: #e6edf3; border: 1px solid #30363d; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+  input { cursor: text; }
+  #price { font-size: 18px; font-weight: 600; padding: 2px 8px; border-radius: 4px; transition: background-color 0.15s ease; }
+  #change { font-size: 14px; }
+  .up { color: #26a69a; }
+  .down { color: #ef5350; }
+  .flash-up { background-color: rgba(38,166,154,0.45) !important; }
+  .flash-down { background-color: rgba(239,83,80,0.45) !important; }
+  #app { display: flex; width: 100vw; height: 100vh; }
+  #rail { width: 92px; flex: none; background: #010409; border-right: 1px solid #21262d; overflow-y: auto; padding: 6px 0; }
+  #rail button { display: block; width: 100%; background: none; border: none; border-radius: 0; color: #8b949e; padding: 10px 4px; font-size: 11px; text-align: center; }
+  #rail button:hover { background: #161b22; color: #e6edf3; }
+  #rail button.active { color: #58a6ff; background: #0d1117; border-left: 2px solid #58a6ff; }
+  #main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+  #chart-wrap { position: relative; width: 100%; height: calc(100vh - 88px); }
+  #chart { width: 100%; height: 100%; }
+  #futures-toggle { display: none; }
+  #futures-toggle.shown { display: inline-flex; }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 50; display: none; align-items: flex-start; justify-content: center; }
+  .modal-backdrop.open { display: flex; }
+  .modal { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; margin-top: 60px; width: min(720px, 92vw); max-height: 78vh; overflow-y: auto; padding: 16px; }
+  .modal h2 { margin: 0 0 10px; font-size: 15px; }
+  .modal table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .modal th, .modal td { padding: 4px 8px; text-align: right; border-bottom: 1px solid #21262d; }
+  .modal th:first-child, .modal td:first-child { text-align: left; }
+  #options-close { float: right; }
+  #options-unavailable { color: #8b949e; font-size: 13px; }
+  #legend { position: absolute; top: 8px; left: 8px; z-index: 5; font-size: 12px; line-height: 1.5; background: rgba(13,17,23,0.7); padding: 6px 10px; border-radius: 4px; pointer-events: none; }
+  #day-lines { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
+  .day-line { position: absolute; top: 0; bottom: 22px; width: 0; border-left: 1px dashed rgba(139,148,158,0.4); }
+  .toggle { display: flex; align-items: center; gap: 4px; font-size: 12px; }
+  #symbol-wrap { position: relative; }
+  #symbol-input { width: 220px; }
+  #symbol-results { position: absolute; top: 100%; left: 0; width: 280px; background: #161b22; border: 1px solid #30363d; border-radius: 4px; z-index: 20; max-height: 260px; overflow-y: auto; display: none; }
+  #symbol-results div { padding: 6px 10px; font-size: 12px; cursor: pointer; }
+  #symbol-results div:hover { background: #21262d; }
+  .sym-name { color: #8b949e; }
+  #range-bar { display: flex; gap: 4px; padding: 6px 16px; border-top: 1px solid #21262d; }
+  #range-bar button { padding: 4px 10px; font-size: 12px; border: none; background: transparent; color: #8b949e; }
+  #range-bar button.active { color: #e6edf3; background: #21262d; border-radius: 4px; }
+  #note { font-size: 11px; color: #8b949e; margin-left: auto; align-self: center; }
+</style>
+</head>
+<body>
+<div id="app">
+  <nav id="rail"></nav>
+  <div id="main">
+    <header>
+      <h1>Orazio</h1>
+      <div id="symbol-wrap">
+        <input id="symbol-input" placeholder="Symbol e.g. NIFTY, AAPL, RELIANCE.NS, BTC-USD" value="NIFTY" />
+        <div id="symbol-results"></div>
+      </div>
+      <span id="price">--</span>
+      <span id="change">--</span>
+      <select id="interval">
+        <option value="1m" selected>1m</option>
+        <option value="5m">5m</option>
+        <option value="15m">15m</option>
+        <option value="1h">1h</option>
+        <option value="1d">1D</option>
+      </select>
+      <select id="style">
+        <option value="candle" selected>Candles</option>
+        <option value="bar">Bars</option>
+        <option value="line">Line (Close)</option>
+        <option value="area">Area (Close)</option>
+      </select>
+      <label class="toggle"><input type="checkbox" id="sma20"> SMA20</label>
+      <label class="toggle"><input type="checkbox" id="sma50"> SMA50</label>
+      <label class="toggle"><input type="checkbox" id="vol" checked> Volume</label>
+      <label class="toggle" id="futures-toggle"><input type="checkbox" id="futures"> Futures</label>
+      <button id="options-btn">Options</button>
+      <button id="refresh">Refresh</button>
+    </header>
+    <div id="chart-wrap">
+      <div id="legend"></div>
+      <div id="day-lines"></div>
+      <div id="chart"></div>
+    </div>
+    <div id="range-bar">
+      <button data-range="1D" class="active">1D</button>
+      <button data-range="5D">5D</button>
+      <button data-range="1M">1M</button>
+      <button data-range="3M">3M</button>
+      <button data-range="6M">6M</button>
+      <button data-range="YTD">YTD</button>
+      <button data-range="1Y">1Y</button>
+      <button data-range="5Y">5Y</button>
+      <button data-range="ALL">All</button>
+      <span id="note"></span>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="options-modal">
+  <div class="modal">
+    <button id="options-close">Close</button>
+    <h2 id="options-title">Options</h2>
+    <div id="options-body"></div>
+  </div>
+</div>
+
+<script>
+const IST = 'Asia/Kolkata';
+const timeFmt = new Intl.DateTimeFormat('en-IN', { timeZone: IST, hour: '2-digit', minute: '2-digit', hour12: false });
+// Year included everywhere a date is shown — without it, multi-year ranges (5Y/All)
+// are ambiguous about which "18 Sep" you're looking at.
+const dateFmt = new Intl.DateTimeFormat('en-IN', { timeZone: IST, day: '2-digit', month: 'short', year: 'numeric' });
+const dateTimeFmt = new Intl.DateTimeFormat('en-IN', { timeZone: IST, day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+
+const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+  autoSize: true,
+  layout: { background: { color: '#0d1117' }, textColor: '#e6edf3' },
+  grid: { vertLines: { color: '#161b22' }, horzLines: { color: '#161b22' } },
+  crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+  rightPriceScale: { autoScale: true, scaleMargins: { top: 0.08, bottom: 0.35 } },
+  handleScroll: { mouseWheel: true },
+  handleScale: { mouseWheel: true },
+  timeScale: {
+    timeVisible: true,
+    secondsVisible: false,
+    // Default minBarSpacing (0.5px) caps how far fitContent() can zoom out — past
+    // ~2300 bars on a ~1150px chart it silently clamps and anchors to the most recent
+    // data instead of showing everything, with no visual indication. "All" (4600+
+    // daily bars) hit this. A tiny minimum lets fitContent genuinely fit all of it.
+    minBarSpacing: 0.05,
+    tickMarkFormatter: (time) => currentInterval === '1d'
+      ? dateFmt.format(new Date(time * 1000))
+      : timeFmt.format(new Date(time * 1000)),
+  },
+  localization: {
+    timeFormatter: (time) => dateTimeFmt.format(new Date(time * 1000)) + ' IST',
+  },
+});
+
+const candleSeries = chart.addCandlestickSeries({
+  upColor: '#26a69a', downColor: '#ef5350', borderVisible: false,
+  wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+});
+const barSeries = chart.addBarSeries({
+  upColor: '#26a69a', downColor: '#ef5350', visible: false,
+});
+const lineSeries = chart.addLineSeries({ color: '#58a6ff', lineWidth: 2, visible: false });
+const areaSeries = chart.addAreaSeries({
+  lineColor: '#58a6ff', topColor: 'rgba(88,166,255,0.4)', bottomColor: 'rgba(88,166,255,0.0)',
+  visible: false,
+});
+
+const volumeSeries = chart.addHistogramSeries({
+  priceFormat: { type: 'volume' }, priceScaleId: '', scaleMargins: { top: 0.93, bottom: 0 },
+});
+const sma20Series = chart.addLineSeries({ color: '#f0b90b', lineWidth: 1 });
+const sma50Series = chart.addLineSeries({ color: '#7e57c2', lineWidth: 1 });
+
+const priceSeriesByStyle = { candle: candleSeries, bar: barSeries, line: lineSeries, area: areaSeries };
+let currentStyle = 'candle';
+let currentSymbol = 'NIFTY';
+let currentInterval = '1m';
+let currentRange = '1D';
+let latestCandles = [];
+let priceFlashTimer = null;
+let resolvedSymbol = null;
+let historyOldestTime = null;
+let historyExhausted = false;
+let loadingHistory = false;
+let CONFIG = { quickIndices: [], futuresMap: {} };
+let dayBoundaryTimes = new Set();
+// Guards the history-prefetch and zoom-granularity listeners against firing on
+// range changes WE caused (setData/fitContent/setVisibleRange), not the user.
+let suppressRangeEvents = false;
+function unsuppressSoon() { setTimeout(() => { suppressRangeEvents = false; }, 80); }
+
+// Bumped at the start of every loadCandles() call. A stale response (e.g. the
+// debounced wheel-zoom auto-switch resolving after a manual range-button click
+// already started a newer load) is detected and discarded instead of overwriting
+// fresher chart state — this is what actually fixed the "chart jumps/crams to the
+// right after switching ranges" bug: two loadCandles() calls were racing.
+let loadGeneration = 0;
+
+function applyStyle(style) {
+  currentStyle = style;
+  for (const [key, series] of Object.entries(priceSeriesByStyle)) {
+    series.applyOptions({ visible: key === style });
+  }
+  syncStyleData();
+}
+
+function dayKey(t) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: IST, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(t * 1000));
+}
+
+function computeDayBoundaries() {
+  dayBoundaryTimes = new Set();
+  if (currentInterval === '1d' || latestCandles.length < 2) return;
+  let prevDay = dayKey(latestCandles[0].time);
+  for (let i = 1; i < latestCandles.length; i++) {
+    const dk = dayKey(latestCandles[i].time);
+    if (dk !== prevDay) dayBoundaryTimes.add(latestCandles[i].time);
+    prevDay = dk;
+  }
+  renderDayLines();
+}
+
+// Thin dotted vertical line at each session boundary — a DOM overlay (Lightweight
+// Charts v4 has no primitives API for custom drawings), repositioned on every pan/zoom.
+const dayLinesEl = document.getElementById('day-lines');
+function renderDayLines() {
+  dayLinesEl.innerHTML = '';
+  if (currentInterval === '1d' || !dayBoundaryTimes.size) return;
+  const ts = chart.timeScale();
+  for (const t of dayBoundaryTimes) {
+    const x = ts.timeToCoordinate(t);
+    if (x === null) continue;
+    const div = document.createElement('div');
+    div.className = 'day-line';
+    div.style.left = `${x}px`;
+    dayLinesEl.appendChild(div);
+  }
+}
+chart.timeScale().subscribeVisibleTimeRangeChange(renderDayLines);
+new ResizeObserver(renderDayLines).observe(document.getElementById('chart'));
+
+function syncStyleData() {
+  if (currentStyle === 'candle') candleSeries.setData(latestCandles);
+  else if (currentStyle === 'bar') barSeries.setData(latestCandles);
+  else {
+    const closeData = latestCandles.map(c => ({ time: c.time, value: c.close }));
+    if (currentStyle === 'line') lineSeries.setData(closeData);
+    else areaSeries.setData(closeData);
+  }
+}
+
+function sma(data, period) {
+  const out = [];
+  for (let i = 0; i < data.length; i++) {
+    if (i < period - 1) continue;
+    let sum = 0;
+    for (let j = i - period + 1; j <= i; j++) sum += data[j].close;
+    out.push({ time: data[i].time, value: sum / period });
+  }
+  return out;
+}
+
+function renderIndicators() {
+  sma20Series.setData(document.getElementById('sma20').checked ? sma(latestCandles, 20) : []);
+  sma50Series.setData(document.getElementById('sma50').checked ? sma(latestCandles, 50) : []);
+  volumeSeries.setData(document.getElementById('vol').checked ? latestCandles.map(c => ({
+    time: c.time, value: c.volume,
+    color: c.close >= c.open ? 'rgba(38,166,154,0.5)' : 'rgba(239,83,80,0.5)',
+  })) : []);
+}
+
+// Aborting a superseded request (not just discarding its late response) matters
+// because the Flask dev server serializes requests and the browser caps concurrent
+// connections per host — a queue of stale requests can otherwise delay the one
+// response you actually want by many seconds.
+let candlesAbortController = null;
+
+async function loadCandles(opts = {}) {
+  suppressRangeEvents = true;
+  const myGeneration = ++loadGeneration;
+  candlesAbortController?.abort();
+  candlesAbortController = new AbortController();
+  const requestedInterval = opts.interval || document.getElementById('interval').value;
+  const requestedRange = opts.range || currentRange;
+  const preserve = opts.preserveView ? chart.timeScale().getVisibleRange() : null;
+
+  // A yfinance round-trip is ~1.5-2.5s — with no feedback that reads as "unresponsive"
+  // to an impatient click, even though the result is correct once it lands.
+  document.getElementById('note').textContent = 'Loading…';
+
+  let payload;
+  try {
+    const res = await fetch(`/api/candles?symbol=${encodeURIComponent(currentSymbol)}&interval=${requestedInterval}&range=${requestedRange}`, { signal: candlesAbortController.signal });
+    payload = await res.json();
+  } catch (e) {
+    if (e.name === 'AbortError') return; // superseded — a newer loadCandles() is handling things
+    throw e;
+  }
+  if (myGeneration !== loadGeneration) return; // belt-and-suspenders vs. the abort above
+  // Keep locally-built live bars that are newer than anything Yahoo has published yet
+  // (same symbol + interval only); Yahoo's bars replace everything up to its last one.
+  const prevCandles = latestCandles;
+  const sameSeries = resolvedSymbol === payload.symbol && currentInterval === payload.interval;
+  latestCandles = payload.candles;
+  if (sameSeries && prevCandles.length && latestCandles.length) {
+    const serverLast = latestCandles[latestCandles.length - 1].time;
+    const liveTail = prevCandles.filter(c => c.time > serverLast);
+    if (liveTail.length) latestCandles = [...latestCandles, ...liveTail];
+    // A periodic refresh of the SAME range must not discard older days the user has
+    // already scrolled back into (that made the chart flicker/re-fetch every minute).
+    if (requestedRange === currentRange) {
+      const serverFirst = latestCandles[0].time;
+      const olderHistory = prevCandles.filter(c => c.time < serverFirst);
+      if (olderHistory.length) latestCandles = [...olderHistory, ...latestCandles];
+    }
+  }
+  currentInterval = payload.interval;
+  currentRange = requestedRange;
+  document.querySelectorAll('#range-bar button[data-range]').forEach(b => b.classList.toggle('active', b.dataset.range === currentRange));
+  resolvedSymbol = payload.symbol;
+  historyOldestTime = latestCandles.length ? latestCandles[0].time : null;
+  historyExhausted = false;
+
+  const note = document.getElementById('note');
+  if (payload.interval !== requestedInterval) {
+    note.textContent = `${requestedInterval} bars unavailable for ${requestedRange} — showing ${payload.interval}`;
+  } else {
+    note.textContent = '';
+  }
+  document.getElementById('interval').value = payload.interval;
+
+  syncStyleData();
+  renderIndicators();
+  computeDayBoundaries();
+  updateFuturesToggle();
+  if (preserve) chart.timeScale().setVisibleRange(preserve);
+  else chart.timeScale().fitContent();
+  unsuppressSoon();
+}
+
+async function loadMoreHistory() {
+  if (loadingHistory || historyExhausted || currentInterval === '1d' || !resolvedSymbol || historyOldestTime == null) return;
+  loadingHistory = true;
+  suppressRangeEvents = true;
+  const myGeneration = loadGeneration;
+  try {
+    const res = await fetch(`/api/candles/history?symbol=${encodeURIComponent(resolvedSymbol)}&interval=${currentInterval}&before=${historyOldestTime}`);
+    const payload = await res.json();
+    if (myGeneration !== loadGeneration) return; // a fresh loadCandles() superseded this — discard
+    // Defensive dedupe: only ever accept rows strictly older than what we already have,
+    // even though the backend already filters on `before` — never hand the chart
+    // overlapping/duplicate timestamps (Lightweight-Charts rejects non-monotonic data).
+    const newRows = payload.candles.filter(c => c.time < historyOldestTime);
+    if (!newRows.length) { historyExhausted = true; return; }
+
+    const prevRange = chart.timeScale().getVisibleLogicalRange();
+    const addedCount = newRows.length;
+    latestCandles = [...newRows, ...latestCandles];
+    historyOldestTime = latestCandles[0].time;
+
+    syncStyleData();
+    renderIndicators();
+    computeDayBoundaries();
+    if (prevRange) {
+      chart.timeScale().setVisibleLogicalRange({ from: prevRange.from + addedCount, to: prevRange.to + addedCount });
+    }
+  } finally {
+    loadingHistory = false;
+    unsuppressSoon();
+  }
+}
+
+chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+  if (suppressRangeEvents || !range) return;
+  if (range.from < 10) loadMoreHistory();
+});
+
+let lastPolledPrice = null;
+let quotesInFlight = 0;
+async function pollQuote() {
+  quotesInFlight++;
+  // Same class of bug loadCandles had: a quote fetch for the PRE-switch symbol can
+  // resolve after the user has already switched, and without this guard it would
+  // overwrite the price display with the wrong symbol's number and even fold a wrong
+  // -symbol price into the current chart's last candle (via the 1D-fold below).
+  const symbolAtRequest = currentSymbol;
+  try {
+    const res = await fetch(`/api/quote?symbol=${encodeURIComponent(symbolAtRequest)}`);
+    const q = await res.json();
+    if (symbolAtRequest !== currentSymbol) return;
+    const priceEl = document.getElementById('price');
+    const changeEl = document.getElementById('change');
+    priceEl.textContent = q.price.toFixed(2);
+    changeEl.textContent = `${q.change >= 0 ? '+' : ''}${q.change.toFixed(2)} (${q.changePercent.toFixed(2)}%)`;
+    changeEl.className = q.change >= 0 ? 'up' : 'down';
+
+    if (lastPolledPrice !== null && q.price !== lastPolledPrice) {
+      const dir = q.price > lastPolledPrice ? 'flash-up' : 'flash-down';
+      priceEl.classList.remove('flash-up', 'flash-down');
+      priceEl.classList.add(dir);
+      clearTimeout(priceFlashTimer);
+      priceFlashTimer = setTimeout(() => priceEl.classList.remove(dir), 500);
+      tickChangedAt = q.time;
+    }
+    lastPolledPrice = q.price;
+    foldTickIntoChart(q.price, q.time);
+  } catch (e) { /* quote endpoint may be temporarily unavailable */ }
+  finally { quotesInFlight--; }
+}
+
+// Yahoo publishes each 1m bar ~1 minute after it opens, so a chart built only from
+// /api/candles can never show the current minute. Build it from live ticks instead:
+// patch the newest bar, and open a NEW bar locally when the clock crosses a bar
+// boundary. The periodic refetch replaces these with Yahoo's authoritative bars.
+const INTERVAL_SECONDS = { '1m': 60, '5m': 300, '15m': 900, '1h': 3600 };
+let tickChangedAt = 0;
+
+function pushLiveBar(bar, isNew) {
+  if (currentStyle === 'candle') candleSeries.update(bar);
+  else if (currentStyle === 'bar') barSeries.update(bar);
+  else if (currentStyle === 'line') lineSeries.update({ time: bar.time, value: bar.close });
+  else areaSeries.update({ time: bar.time, value: bar.close });
+  if (isNew && document.getElementById('vol').checked) {
+    volumeSeries.update({ time: bar.time, value: 0, color: 'rgba(38,166,154,0.5)' });
+  }
+}
+
+function foldTickIntoChart(price, nowSec) {
+  if (!latestCandles.length) return;
+  const last = latestCandles[latestCandles.length - 1];
+  const step = INTERVAL_SECONDS[currentInterval];
+  // "Live" = the newest bar is recent. After the close (or on an old range) it isn't,
+  // and we must not paint today's price onto a stale bar or invent new ones.
+  const live = step ? (nowSec - last.time < 2 * step + 240)
+                    : (currentInterval === '1d' && nowSec - last.time < 86400);
+  if (!live) return;
+
+  // Anchor to the last bar's own grid (Yahoo's 1h bars start at :15, not :00).
+  const bucket = step ? last.time + Math.floor((nowSec - last.time) / step) * step : last.time;
+  // Only open a new bar while prices are actually moving, so a frozen post-close
+  // quote can't spawn phantom flat candles.
+  if (step && bucket > last.time && nowSec - tickChangedAt < 90) {
+    const bar = { time: bucket, open: price, high: price, low: price, close: price, volume: 0 };
+    latestCandles.push(bar);
+    pushLiveBar(bar, true);
+    return;
+  }
+  const updated = { ...last, close: price, high: Math.max(last.high, price), low: Math.min(last.low, price) };
+  latestCandles[latestCandles.length - 1] = updated;
+  pushLiveBar(updated, false);
+}
+
+const legend = document.getElementById('legend');
+chart.subscribeCrosshairMove(param => {
+  const activeSeries = priceSeriesByStyle[currentStyle];
+  if (!param.time || !param.seriesData.get(activeSeries)) {
+    const last = latestCandles[latestCandles.length - 1];
+    if (last) legend.innerHTML = `${currentSymbol} — O ${last.open.toFixed(2)} H ${last.high.toFixed(2)} L ${last.low.toFixed(2)} C ${last.close.toFixed(2)}`;
+    return;
+  }
+  const d = param.seriesData.get(activeSeries);
+  if (d.open !== undefined) {
+    legend.innerHTML = `${currentSymbol} — O ${d.open.toFixed(2)} H ${d.high.toFixed(2)} L ${d.low.toFixed(2)} C ${d.close.toFixed(2)}`;
+  } else {
+    legend.innerHTML = `${currentSymbol} — C ${d.value.toFixed(2)}`;
+  }
+});
+
+// --- symbol search ---
+const symbolInput = document.getElementById('symbol-input');
+const resultsBox = document.getElementById('symbol-results');
+let searchDebounce = null;
+
+symbolInput.addEventListener('input', () => {
+  clearTimeout(searchDebounce);
+  const q = symbolInput.value.trim();
+  if (q.length < 1) { resultsBox.style.display = 'none'; return; }
+  searchDebounce = setTimeout(async () => {
+    const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+    const items = await res.json();
+    if (!items.length) { resultsBox.style.display = 'none'; return; }
+    resultsBox.innerHTML = items.map(it =>
+      `<div data-symbol="${it.symbol}">${it.symbol} <span class="sym-name">${it.name || ''} · ${it.exchange || ''}</span></div>`
+    ).join('');
+    resultsBox.style.display = 'block';
+  }, 300);
+});
+
+resultsBox.addEventListener('click', (e) => {
+  const row = e.target.closest('div[data-symbol]');
+  if (!row) return;
+  clearTimeout(searchDebounce);
+  symbolInput.value = row.dataset.symbol;
+  resultsBox.style.display = 'none';
+  switchSymbol(row.dataset.symbol);
+});
+
+symbolInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    // Cancel any pending debounced search fetch — otherwise it can resolve after
+    // Enter closes the dropdown and reopen it with stale results.
+    clearTimeout(searchDebounce);
+    resultsBox.style.display = 'none';
+    switchSymbol(symbolInput.value.trim());
+  }
+});
+
+function switchSymbol(symbol) {
+  if (!symbol || symbol.toUpperCase() === currentSymbol) return;
+  currentSymbol = symbol.toUpperCase();
+  lastPolledPrice = null;
+  tickChangedAt = 0;
+  loadCandles();
+  pollQuote();
+  highlightRail();
+}
+
+// --- futures toggle (cash <-> futures, only for symbols yfinance actually covers) ---
+function futuresCounterpart(sym) {
+  if (CONFIG.futuresMap[sym]) return { mode: 'cash', to: CONFIG.futuresMap[sym] };
+  const cash = Object.keys(CONFIG.futuresMap).find(k => CONFIG.futuresMap[k] === sym);
+  return cash ? { mode: 'futures', to: cash } : null;
+}
+
+function updateFuturesToggle() {
+  const wrap = document.getElementById('futures-toggle');
+  const box = document.getElementById('futures');
+  const info = resolvedSymbol ? futuresCounterpart(resolvedSymbol) : null;
+  wrap.classList.toggle('shown', !!info);
+  box.checked = !!info && info.mode === 'futures';
+}
+
+document.getElementById('futures').addEventListener('change', () => {
+  const info = resolvedSymbol ? futuresCounterpart(resolvedSymbol) : null;
+  if (info) switchSymbol(info.to);
+});
+
+// --- left index rail ---
+function highlightRail() {
+  document.querySelectorAll('#rail button').forEach(b => b.classList.toggle('active', b.dataset.sym === currentSymbol));
+}
+
+async function loadConfig() {
+  const res = await fetch('/api/config');
+  CONFIG = await res.json();
+  const rail = document.getElementById('rail');
+  rail.innerHTML = CONFIG.quickIndices.map(sym => `<button data-sym="${sym}">${sym}</button>`).join('');
+  rail.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-sym]');
+    if (!btn) return;
+    symbolInput.value = btn.dataset.sym;
+    switchSymbol(btn.dataset.sym);
+  });
+  highlightRail();
+}
+
+// --- options premium panel ---
+const optionsModal = document.getElementById('options-modal');
+document.getElementById('options-btn').addEventListener('click', () => openOptions());
+document.getElementById('options-close').addEventListener('click', () => optionsModal.classList.remove('open'));
+
+async function openOptions(expiry) {
+  optionsModal.classList.add('open');
+  const body = document.getElementById('options-body');
+  document.getElementById('options-title').textContent = `Options — ${resolvedSymbol || currentSymbol}`;
+  body.innerHTML = 'Loading…';
+  const sym = resolvedSymbol || currentSymbol;
+  const url = `/api/options?symbol=${encodeURIComponent(sym)}` + (expiry ? `&expiry=${encodeURIComponent(expiry)}` : '');
+  const res = await fetch(url);
+  const data = await res.json();
+  if (!data.available) {
+    body.innerHTML = `<div id="options-unavailable">Options data unavailable for ${sym}${data.reason ? ' — ' + data.reason : ''}.</div>`;
+    return;
+  }
+  const fmt = (v) => v === null || v === undefined ? '-' : v;
+  const table = (label, rows) => `<h3>${label}</h3><table><thead><tr>
+      <th>Strike</th><th>Last</th><th>Bid</th><th>Ask</th><th>Vol</th><th>OI</th></tr></thead><tbody>${
+    rows.map(r => `<tr><td>${fmt(r.strike)}</td><td>${fmt(r.lastPrice)}</td><td>${fmt(r.bid)}</td><td>${fmt(r.ask)}</td><td>${fmt(r.volume)}</td><td>${fmt(r.openInterest)}</td></tr>`).join('')
+  }</tbody></table>`;
+  body.innerHTML =
+    `<select id="expiry-select">${data.expiries.map(e => `<option value="${e}" ${e === data.expiry ? 'selected' : ''}>${e}</option>`).join('')}</select>` +
+    table('Calls', data.calls) + table('Puts', data.puts);
+  document.getElementById('expiry-select').addEventListener('change', (e) => openOptions(e.target.value));
+}
+
+document.getElementById('interval').addEventListener('change', loadCandles);
+document.getElementById('style').addEventListener('change', (e) => applyStyle(e.target.value));
+document.getElementById('refresh').addEventListener('click', loadCandles);
+document.getElementById('sma20').addEventListener('change', renderIndicators);
+document.getElementById('sma50').addEventListener('change', renderIndicators);
+document.getElementById('vol').addEventListener('change', renderIndicators);
+
+document.querySelectorAll('#range-bar button[data-range]').forEach(btn => {
+  // Always request the finest interval as a baseline — the backend escalates to a
+  // coarser one only if that range genuinely can't be served at 1m. Without this, a
+  // range button reuses whatever interval a PREVIOUS wider range had auto-selected
+  // (e.g. clicking 1D after YTD kept YTD's 1h bars instead of resetting to 1m).
+  btn.addEventListener('click', () => loadCandles({ range: btn.dataset.range, interval: '1m' }));
+});
+
+loadConfig();
+loadCandles();
+pollQuote();
+setInterval(() => { if (quotesInFlight === 0) pollQuote(); }, 2000);
+setInterval(() => loadCandles({ preserveView: true }), 60000);
+</script>
+</body>
+</html>

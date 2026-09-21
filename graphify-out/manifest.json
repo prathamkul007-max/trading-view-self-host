@@ -1,0 +1,44 @@
+{
+  ".mcp.json": {
+    "mtime": 1789635837.1066902,
+    "seen": 1789964656.2205129,
+    "ast_hash": "5495520278b7d69d9688125275d3d7fb",
+    "semantic_hash": "5495520278b7d69d9688125275d3d7fb"
+  },
+  "app.py": {
+    "mtime": 1789638431.765612,
+    "seen": 1789964656.2205162,
+    "ast_hash": "dae0cbe34f2b4b4f91ae871201e85d65",
+    "semantic_hash": "dae0cbe34f2b4b4f91ae871201e85d65"
+  },
+  "requirements.txt": {
+    "mtime": 1789627844.696668,
+    "seen": 1789964656.2205174,
+    "ast_hash": "efd4e25802cc39d729e6940b028fc657",
+    "semantic_hash": "efd4e25802cc39d729e6940b028fc657"
+  },
+  "static/index.html": {
+    "mtime": 1789964347.192703,
+    "seen": 1789964656.2205179,
+    "ast_hash": "00b17d865e0c9a7c896336ec583fde5b",
+    "semantic_hash": "00b17d865e0c9a7c896336ec583fde5b"
+  },
+  "tasks/plan.md": {
+    "mtime": 1789633945.5110006,
+    "seen": 1789964656.2205186,
+    "ast_hash": "1744bebf89c6fa4d09ac9d86c99b228e",
+    "semantic_hash": "1744bebf89c6fa4d09ac9d86c99b228e"
+  },
+  "tasks/spec.md": {
+    "mtime": 1789635485.1634533,
+    "seen": 1789964656.2205195,
+    "ast_hash": "cff943ecee34b0beb6f09c9c709c884b",
+    "semantic_hash": "cff943ecee34b0beb6f09c9c709c884b"
+  },
+  "tasks/todo.md": {
+    "mtime": 1789702832.4916334,
+    "seen": 1789964656.22052,
+    "ast_hash": "813b7b32145e6b5dda534a652a82121a",
+    "semantic_hash": "813b7b32145e6b5dda534a652a82121a"
+  }
+}
