@@ -2,133 +2,209 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<meta name="theme-color" content="#090b10" />
 <title>Orazio</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230e1117'/%3E%3Cpath d='M7 5v14M7 8h0M12 9v10M17 4v12' stroke='%234c8dff' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="/styles.css" />
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<style>
-  * { box-sizing: border-box; }
-  body { margin: 0; background: #0d1117; font-family: sans-serif; color: #e6edf3; }
-  header { padding: 10px 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-  h1 { font-size: 16px; margin: 0; }
-  select, button, input { background: #161b22; color: #e6edf3; border: 1px solid #30363d; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; }
-  input { cursor: text; }
-  #price { font-size: 18px; font-weight: 600; padding: 2px 8px; border-radius: 4px; transition: background-color 0.15s ease; }
-  #change { font-size: 14px; }
-  .up { color: #26a69a; }
-  .down { color: #ef5350; }
-  .flash-up { background-color: rgba(38,166,154,0.45) !important; }
-  .flash-down { background-color: rgba(239,83,80,0.45) !important; }
-  #app { display: flex; width: 100vw; height: 100vh; }
-  #rail { width: 92px; flex: none; background: #010409; border-right: 1px solid #21262d; overflow-y: auto; padding: 6px 0; }
-  #rail button { display: block; width: 100%; background: none; border: none; border-radius: 0; color: #8b949e; padding: 10px 4px; font-size: 11px; text-align: center; }
-  #rail button:hover { background: #161b22; color: #e6edf3; }
-  #rail button.active { color: #58a6ff; background: #0d1117; border-left: 2px solid #58a6ff; }
-  #main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-  #chart-wrap { position: relative; width: 100%; height: calc(100vh - 88px); }
-  #chart { width: 100%; height: 100%; }
-  #futures-toggle { display: none; }
-  #futures-toggle.shown { display: inline-flex; }
-  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 50; display: none; align-items: flex-start; justify-content: center; }
-  .modal-backdrop.open { display: flex; }
-  .modal { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; margin-top: 60px; width: min(720px, 92vw); max-height: 78vh; overflow-y: auto; padding: 16px; }
-  .modal h2 { margin: 0 0 10px; font-size: 15px; }
-  .modal table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .modal th, .modal td { padding: 4px 8px; text-align: right; border-bottom: 1px solid #21262d; }
-  .modal th:first-child, .modal td:first-child { text-align: left; }
-  #options-close { float: right; }
-  #options-unavailable { color: #8b949e; font-size: 13px; }
-  #legend { position: absolute; top: 8px; left: 8px; z-index: 5; font-size: 12px; line-height: 1.5; background: rgba(13,17,23,0.7); padding: 6px 10px; border-radius: 4px; pointer-events: none; }
-  #day-lines { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
-  .day-line { position: absolute; top: 0; bottom: 22px; width: 0; border-left: 1px dashed rgba(139,148,158,0.4); }
-  .toggle { display: flex; align-items: center; gap: 4px; font-size: 12px; }
-  #symbol-wrap { position: relative; }
-  #symbol-input { width: 220px; }
-  #symbol-results { position: absolute; top: 100%; left: 0; width: 280px; background: #161b22; border: 1px solid #30363d; border-radius: 4px; z-index: 20; max-height: 260px; overflow-y: auto; display: none; }
-  #symbol-results div { padding: 6px 10px; font-size: 12px; cursor: pointer; }
-  #symbol-results div:hover { background: #21262d; }
-  .sym-name { color: #8b949e; }
-  #range-bar { display: flex; gap: 4px; padding: 6px 16px; border-top: 1px solid #21262d; }
-  #range-bar button { padding: 4px 10px; font-size: 12px; border: none; background: transparent; color: #8b949e; }
-  #range-bar button.active { color: #e6edf3; background: #21262d; border-radius: 4px; }
-  #note { font-size: 11px; color: #8b949e; margin-left: auto; align-self: center; }
-</style>
 </head>
 <body>
-<div id="app">
-  <nav id="rail"></nav>
-  <div id="main">
-    <header>
-      <h1>Orazio</h1>
-      <div id="symbol-wrap">
-        <input id="symbol-input" placeholder="Symbol e.g. NIFTY, AAPL, RELIANCE.NS, BTC-USD" value="NIFTY" />
-        <div id="symbol-results"></div>
+<div class="app">
+  <nav class="rail" id="rail" aria-label="Indices">
+    <h1 class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#4c8dff" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 5v14M12 8v11M18 4v12"/></svg>
+      Orazio
+    </h1>
+    <div id="rail-groups"></div>
+
+    <section class="cas" id="cas" aria-label="Call auction session">
+      <button type="button" class="cas-head" id="cas-toggle" aria-expanded="true" aria-controls="cas-body">
+        <span class="cas-title">Call Auction</span>
+        <svg class="cas-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        <span class="cas-phase" id="cas-phase" data-live="false">—</span>
+      </button>
+      <div class="cas-body" id="cas-body">
+        <div id="cas-rows"></div>
+        <p class="cas-stage" id="cas-stage" hidden></p>
+        <div class="cas-breadth" id="cas-breadth" hidden></div>
+        <button type="button" class="cas-open cas-open-live" id="cas-move-open"><span class="live-dot" aria-hidden="true"></span>Live CAS movement</button>
+        <button type="button" class="cas-open" id="cas-open">View stock-by-stock feed →</button>
+        <p class="cas-note" id="cas-note"></p>
       </div>
-      <span id="price">--</span>
-      <span id="change">--</span>
-      <select id="interval">
-        <option value="1m" selected>1m</option>
-        <option value="5m">5m</option>
-        <option value="15m">15m</option>
-        <option value="1h">1h</option>
-        <option value="1d">1D</option>
-      </select>
-      <select id="style">
-        <option value="candle" selected>Candles</option>
+    </section>
+  </nav>
+
+  <div class="main">
+    <header class="toolbar" role="toolbar" aria-label="Chart controls">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="symbol-input" type="text" role="combobox" aria-label="Search symbol" aria-expanded="false" aria-controls="symbol-results" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="Search symbol…" value="NIFTY" />
+        <span class="kbd" aria-hidden="true">/</span>
+        <div class="results" id="symbol-results" role="listbox"></div>
+      </div>
+
+      <div class="quote" aria-live="off">
+        <span id="price">--</span>
+        <span id="change" class="chip">--</span>
+      </div>
+
+      <span class="sep"></span>
+
+      <div class="seg" id="interval-seg" role="group" aria-label="Bar interval">
+        <button type="button" data-interval="1m" aria-pressed="true">1m</button>
+        <button type="button" data-interval="5m" aria-pressed="false">5m</button>
+        <button type="button" data-interval="15m" aria-pressed="false">15m</button>
+        <button type="button" data-interval="1h" aria-pressed="false">1h</button>
+        <button type="button" data-interval="1d" aria-pressed="false">1D</button>
+      </div>
+
+      <select id="style" class="select" aria-label="Chart style">
+        <option value="candle">Candles</option>
         <option value="bar">Bars</option>
-        <option value="line">Line (Close)</option>
-        <option value="area">Area (Close)</option>
+        <option value="line">Line</option>
+        <option value="area">Area</option>
       </select>
-      <label class="toggle"><input type="checkbox" id="sma20"> SMA20</label>
-      <label class="toggle"><input type="checkbox" id="sma50"> SMA50</label>
-      <label class="toggle"><input type="checkbox" id="vol" checked> Volume</label>
-      <label class="toggle" id="futures-toggle"><input type="checkbox" id="futures"> Futures</label>
-      <button id="options-btn">Options</button>
-      <button id="refresh">Refresh</button>
+
+      <span class="sep"></span>
+
+      <label class="toggle always" style="--dot:#f0b90b"><input type="checkbox" id="sma20"><span>SMA 20</span></label>
+      <label class="toggle always" style="--dot:#7e57c2"><input type="checkbox" id="sma50"><span>SMA 50</span></label>
+      <label class="toggle always" style="--dot:#26a69a"><input type="checkbox" id="vol" checked><span>Volume</span></label>
+
+      <span class="spacer"></span>
+
+      <label class="toggle" id="futures-toggle" style="--dot:#4c8dff" title="Switch between the index and its futures contract"><input type="checkbox" id="futures"><span>Futures</span></label>
+      <button type="button" class="btn" id="options-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+        <span class="label">Options</span>
+      </button>
+      <button type="button" class="btn icon" id="refresh" aria-label="Refresh data" title="Refresh data">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg>
+      </button>
     </header>
-    <div id="chart-wrap">
-      <div id="legend"></div>
-      <div id="day-lines"></div>
+
+    <section class="chart-wrap" id="chart-wrap" aria-label="Price chart">
+      <div class="progress" aria-hidden="true"></div>
+      <div class="legend" id="legend" aria-live="off"></div>
+      <div id="day-lines" aria-hidden="true"></div>
       <div id="chart"></div>
-    </div>
-    <div id="range-bar">
-      <button data-range="1D" class="active">1D</button>
-      <button data-range="5D">5D</button>
-      <button data-range="1M">1M</button>
-      <button data-range="3M">3M</button>
-      <button data-range="6M">6M</button>
-      <button data-range="YTD">YTD</button>
-      <button data-range="1Y">1Y</button>
-      <button data-range="5Y">5Y</button>
-      <button data-range="ALL">All</button>
-      <span id="note"></span>
-    </div>
+      <div class="chart-state" id="chart-state" role="status">
+        <h2 id="chart-state-title"></h2>
+        <p id="chart-state-text"></p>
+        <button type="button" class="btn" id="chart-state-retry">Try again</button>
+      </div>
+    </section>
+
+    <footer class="statusbar">
+      <div class="seg" id="range-bar" role="group" aria-label="History range">
+        <button type="button" data-range="1D" aria-pressed="true">1D</button>
+        <button type="button" data-range="5D" aria-pressed="false">5D</button>
+        <button type="button" data-range="1M" aria-pressed="false">1M</button>
+        <button type="button" data-range="3M" aria-pressed="false">3M</button>
+        <button type="button" data-range="6M" aria-pressed="false">6M</button>
+        <button type="button" data-range="YTD" aria-pressed="false">YTD</button>
+        <button type="button" data-range="1Y" aria-pressed="false">1Y</button>
+        <button type="button" data-range="5Y" aria-pressed="false">5Y</button>
+        <button type="button" data-range="ALL" aria-pressed="false">All</button>
+      </div>
+      <span id="note" role="status"></span>
+      <span class="spacer"></span>
+      <span class="conn" id="conn" data-state="idle">Connecting…</span>
+      <span id="clock" aria-label="Current time in India Standard Time"></span>
+    </footer>
   </div>
 </div>
 
-<div class="modal-backdrop" id="options-modal">
-  <div class="modal">
-    <button id="options-close">Close</button>
-    <h2 id="options-title">Options</h2>
-    <div id="options-body"></div>
+<div class="backdrop" id="options-modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="options-title">
+    <div class="modal-head">
+      <h2 id="options-title">Options</h2>
+      <select id="expiry-select" class="select" aria-label="Expiry date" hidden></select>
+      <button type="button" class="btn icon" id="options-close" aria-label="Close options">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="options-body"></div>
   </div>
 </div>
+
+<div class="backdrop" id="move-modal">
+  <div class="modal move-modal" role="dialog" aria-modal="true" aria-labelledby="move-title">
+    <div class="modal-head">
+      <h2 id="move-title">Live CAS · Indian indices</h2>
+      <span class="feed-pill" id="move-pill" data-live="false">—</span>
+      <button type="button" class="btn icon" id="move-close" aria-label="Close live CAS">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="feed-strip" id="move-strip"></div>
+    <div class="modal-body move-body"><div class="move-grid" id="move-grid"></div></div>
+  </div>
+</div>
+
+<div class="backdrop" id="feed-modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="feed-title">
+    <div class="modal-head">
+      <h2 id="feed-title">Call Auction · live feed</h2>
+      <span class="feed-pill" id="feed-pill" data-live="false">—</span>
+      <div class="seg" id="feed-universe" role="group" aria-label="Universe">
+        <button type="button" data-key="FO" aria-pressed="true">F&amp;O</button>
+        <button type="button" data-key="ALL" aria-pressed="false">All</button>
+      </div>
+      <input id="feed-filter" class="feed-filter" type="search" placeholder="Filter symbol…" aria-label="Filter by symbol" autocomplete="off" />
+      <button type="button" class="btn icon" id="feed-close" aria-label="Close live feed">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="feed-strip" id="feed-strip"></div>
+    <div class="modal-body" id="feed-body"></div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script>
+// ---------- design tokens shared with styles.css ----------
+const css = getComputedStyle(document.documentElement);
+const token = (n) => css.getPropertyValue(n).trim();
+const alpha = (hex, a) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${n >> 16}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+};
+const COLORS = {
+  bg: token('--bg-1'), grid: token('--line'), border: token('--line-strong'), text: token('--text-dim'),
+  accent: token('--accent'), up: token('--up'), down: token('--down'),
+  volUp: alpha(token('--up'), 0.45), volDown: alpha(token('--down'), 0.45),
+};
+
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 const IST = 'Asia/Kolkata';
 const timeFmt = new Intl.DateTimeFormat('en-IN', { timeZone: IST, hour: '2-digit', minute: '2-digit', hour12: false });
 // Year included everywhere a date is shown — without it, multi-year ranges (5Y/All)
 // are ambiguous about which "18 Sep" you're looking at.
 const dateFmt = new Intl.DateTimeFormat('en-IN', { timeZone: IST, day: '2-digit', month: 'short', year: 'numeric' });
 const dateTimeFmt = new Intl.DateTimeFormat('en-IN', { timeZone: IST, day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+const clockFmt = new Intl.DateTimeFormat('en-GB', { timeZone: IST, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+const INTERVAL_LABEL = { '1m': '1m', '5m': '5m', '15m': '15m', '1h': '1h', '1d': '1D' };
 
 const chart = LightweightCharts.createChart(document.getElementById('chart'), {
   autoSize: true,
-  layout: { background: { color: '#0d1117' }, textColor: '#e6edf3' },
-  grid: { vertLines: { color: '#161b22' }, horzLines: { color: '#161b22' } },
-  crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-  rightPriceScale: { autoScale: true, scaleMargins: { top: 0.08, bottom: 0.35 } },
+  layout: { background: { color: COLORS.bg }, textColor: COLORS.text, fontFamily: token('--font'), fontSize: 12 },
+  grid: { vertLines: { color: COLORS.grid }, horzLines: { color: COLORS.grid } },
+  crosshair: {
+    mode: LightweightCharts.CrosshairMode.Normal,
+    vertLine: { color: COLORS.border, labelBackgroundColor: token('--bg-3') },
+    horzLine: { color: COLORS.border, labelBackgroundColor: token('--bg-3') },
+  },
+  rightPriceScale: { autoScale: true, borderColor: COLORS.border, scaleMargins: { top: 0.08, bottom: 0.35 } },
   handleScroll: { mouseWheel: true },
   handleScale: { mouseWheel: true },
+  watermark: { visible: false, color: 'rgba(230, 234, 242, 0.05)', fontSize: 56, horzAlign: 'center', vertAlign: 'center', text: '' },
   timeScale: {
+    borderColor: COLORS.border,
     timeVisible: true,
     secondsVisible: false,
     // Default minBarSpacing (0.5px) caps how far fitContent() can zoom out — past
@@ -146,28 +222,28 @@ const chart = LightweightCharts.createChart(document.getElementById('chart'), {
 });
 
 const candleSeries = chart.addCandlestickSeries({
-  upColor: '#26a69a', downColor: '#ef5350', borderVisible: false,
-  wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+  upColor: COLORS.up, downColor: COLORS.down, borderVisible: false,
+  wickUpColor: COLORS.up, wickDownColor: COLORS.down,
 });
-const barSeries = chart.addBarSeries({
-  upColor: '#26a69a', downColor: '#ef5350', visible: false,
-});
-const lineSeries = chart.addLineSeries({ color: '#58a6ff', lineWidth: 2, visible: false });
+const barSeries = chart.addBarSeries({ upColor: COLORS.up, downColor: COLORS.down, visible: false });
+const lineSeries = chart.addLineSeries({ color: COLORS.accent, lineWidth: 2, visible: false });
 const areaSeries = chart.addAreaSeries({
-  lineColor: '#58a6ff', topColor: 'rgba(88,166,255,0.4)', bottomColor: 'rgba(88,166,255,0.0)',
+  lineColor: COLORS.accent, topColor: alpha(COLORS.accent, 0.35), bottomColor: alpha(COLORS.accent, 0),
   visible: false,
 });
 
 const volumeSeries = chart.addHistogramSeries({
   priceFormat: { type: 'volume' }, priceScaleId: '', scaleMargins: { top: 0.93, bottom: 0 },
+  priceLineVisible: false, lastValueVisible: false,
 });
-const sma20Series = chart.addLineSeries({ color: '#f0b90b', lineWidth: 1 });
-const sma50Series = chart.addLineSeries({ color: '#7e57c2', lineWidth: 1 });
+const sma20Series = chart.addLineSeries({ color: '#f0b90b', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+const sma50Series = chart.addLineSeries({ color: '#7e57c2', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
 
 const priceSeriesByStyle = { candle: candleSeries, bar: barSeries, line: lineSeries, area: areaSeries };
 let currentStyle = 'candle';
 let currentSymbol = 'NIFTY';
 let currentInterval = '1m';
+let selectedInterval = '1m';
 let currentRange = '1D';
 let latestCandles = [];
 let priceFlashTimer = null;
@@ -175,26 +251,96 @@ let resolvedSymbol = null;
 let historyOldestTime = null;
 let historyExhausted = false;
 let loadingHistory = false;
-let CONFIG = { quickIndices: [], futuresMap: {} };
+let CONFIG = { quickIndices: [], futuresMap: {}, futuresMeta: {} };
 let dayBoundaryTimes = new Set();
-// Guards the history-prefetch and zoom-granularity listeners against firing on
-// range changes WE caused (setData/fitContent/setVisibleRange), not the user.
+// Guards the history-prefetch listener against firing on range changes WE caused
+// (setData/fitContent/setVisibleRange), not the user.
 let suppressRangeEvents = false;
 function unsuppressSoon() { setTimeout(() => { suppressRangeEvents = false; }, 80); }
 
-// Bumped at the start of every loadCandles() call. A stale response (e.g. the
-// debounced wheel-zoom auto-switch resolving after a manual range-button click
-// already started a newer load) is detected and discarded instead of overwriting
-// fresher chart state — this is what actually fixed the "chart jumps/crams to the
-// right after switching ranges" bug: two loadCandles() calls were racing.
+// Bumped at the start of every loadCandles() call. A stale response (e.g. a slow request
+// resolving after a newer range/symbol click already started another load) is detected
+// and discarded instead of overwriting fresher chart state.
 let loadGeneration = 0;
 
+// ---------- small UI helpers ----------
+const $ = (id) => document.getElementById(id);
+
+// "ES=F" is the CME's S&P 500 futures contract — real, but unreadable. Show its name.
+const displayName = (sym) => (CONFIG.futuresMeta && CONFIG.futuresMeta[sym] && CONFIG.futuresMeta[sym].name) || sym;
+
+function toast(message, kind = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast ${kind}`;
+  el.textContent = message;
+  $('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 4200);
+}
+
+function setLoading(on) { $('chart-wrap').classList.toggle('is-loading', on); }
+
+function showChartState(title, text) {
+  $('chart-state-title').textContent = title;
+  $('chart-state-text').textContent = text;
+  $('chart-state').classList.add('show');
+}
+function hideChartState() { $('chart-state').classList.remove('show'); }
+$('chart-state-retry').addEventListener('click', () => loadCandles());
+
+function setConn(state, text, title = '') {
+  const el = $('conn');
+  el.dataset.state = state;
+  el.textContent = text || (state === 'ok' ? 'Live' : state === 'err' ? 'Reconnecting…' : 'Connecting…');
+  el.title = title;
+}
+
+// Be honest about how old the data is: some feeds are delayed by their provider (SENSEX on
+// Yahoo ~15 min, CME futures ~10 min) and that must read as "delayed", not as a broken app.
+const SOURCE_LABEL = { yahoo: 'Yahoo Finance', bse: 'BSE India', nse: 'NSE India', yfinance: 'Yahoo Finance (fallback)' };
+function showFreshness(q) {
+  const age = q.delaySec;
+  const via = SOURCE_LABEL[q.source] || q.source;
+  if (age === null || age === undefined) { setConn('ok', 'Live', `Source: ${via}`); return; }
+  // 150s, not 90: BSE stamps SENSEX to the minute and publishes once a minute, so a
+  // perfectly healthy feed still reads up to ~2 min old and must not say "Delayed".
+  if (age <= 150) { setConn('ok', `Live · ${age}s`, `Source: ${via} · last tick ${age}s ago`); return; }
+  if (age <= 1800) { setConn('err', `Delayed ${Math.round(age / 60)}m`, `${via} publishes this feed ~${Math.round(age / 60)} minutes late — the delay is at the source`); return; }
+  setConn('idle', `Closed · ${timeFmt.format(new Date(q.marketTime * 1000))}`, `Market is closed. Last tick at ${dateTimeFmt.format(new Date(q.marketTime * 1000))} IST`);
+}
+
+function setIntervalUI(value) {
+  selectedInterval = value;
+  document.querySelectorAll('#interval-seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.interval === value)));
+}
+function setRangeUI(value) {
+  document.querySelectorAll('#range-bar button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.range === value)));
+}
+
+setInterval(() => { $('clock').textContent = clockFmt.format(new Date()) + ' IST'; }, 1000);
+$('clock').textContent = clockFmt.format(new Date()) + ' IST';
+
+// ---------- persisted preferences ----------
+const PREFS_KEY = 'orazio.prefs.v1';
+function savePrefs() {
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify({
+      symbol: currentSymbol, style: currentStyle,
+      sma20: $('sma20').checked, sma50: $('sma50').checked, vol: $('vol').checked,
+    }));
+  } catch (e) { /* storage unavailable (private mode) — preferences just won't persist */ }
+}
+function loadPrefs() {
+  try { return JSON.parse(localStorage.getItem(PREFS_KEY) || 'null') || {}; } catch (e) { return {}; }
+}
+
+// ---------- chart rendering ----------
 function applyStyle(style) {
   currentStyle = style;
   for (const [key, series] of Object.entries(priceSeriesByStyle)) {
     series.applyOptions({ visible: key === style });
   }
   syncStyleData();
+  updateLegend(null);
 }
 
 function dayKey(t) {
@@ -203,7 +349,7 @@ function dayKey(t) {
 
 function computeDayBoundaries() {
   dayBoundaryTimes = new Set();
-  if (currentInterval === '1d' || latestCandles.length < 2) return;
+  if (currentInterval === '1d' || latestCandles.length < 2) { renderDayLines(); return; }
   let prevDay = dayKey(latestCandles[0].time);
   for (let i = 1; i < latestCandles.length; i++) {
     const dk = dayKey(latestCandles[i].time);
@@ -215,11 +361,12 @@ function computeDayBoundaries() {
 
 // Thin dotted vertical line at each session boundary — a DOM overlay (Lightweight
 // Charts v4 has no primitives API for custom drawings), repositioned on every pan/zoom.
-const dayLinesEl = document.getElementById('day-lines');
+const dayLinesEl = $('day-lines');
 function renderDayLines() {
   dayLinesEl.innerHTML = '';
   if (currentInterval === '1d' || !dayBoundaryTimes.size) return;
   const ts = chart.timeScale();
+  dayLinesEl.style.setProperty('--axis-h', `${ts.height ? ts.height() : 26}px`);
   for (const t of dayBoundaryTimes) {
     const x = ts.timeToCoordinate(t);
     if (x === null) continue;
@@ -230,9 +377,14 @@ function renderDayLines() {
   }
 }
 chart.timeScale().subscribeVisibleTimeRangeChange(renderDayLines);
-new ResizeObserver(renderDayLines).observe(document.getElementById('chart'));
+new ResizeObserver(renderDayLines).observe($('chart'));
 
 function syncStyleData() {
+  // Hidden series must be emptied: the time scale is built from EVERY series' data, so
+  // stale bars left behind by a previous style stretch the axis and break fitContent().
+  for (const [key, series] of Object.entries(priceSeriesByStyle)) {
+    if (key !== currentStyle) series.setData([]);
+  }
   if (currentStyle === 'candle') candleSeries.setData(latestCandles);
   else if (currentStyle === 'bar') barSeries.setData(latestCandles);
   else {
@@ -254,14 +406,47 @@ function sma(data, period) {
 }
 
 function renderIndicators() {
-  sma20Series.setData(document.getElementById('sma20').checked ? sma(latestCandles, 20) : []);
-  sma50Series.setData(document.getElementById('sma50').checked ? sma(latestCandles, 50) : []);
-  volumeSeries.setData(document.getElementById('vol').checked ? latestCandles.map(c => ({
+  sma20Series.setData($('sma20').checked ? sma(latestCandles, 20) : []);
+  sma50Series.setData($('sma50').checked ? sma(latestCandles, 50) : []);
+  volumeSeries.setData($('vol').checked ? latestCandles.map(c => ({
     time: c.time, value: c.volume,
-    color: c.close >= c.open ? 'rgba(38,166,154,0.5)' : 'rgba(239,83,80,0.5)',
+    color: c.close >= c.open ? COLORS.volUp : COLORS.volDown,
   })) : []);
 }
 
+function updateWatermark() {
+  chart.applyOptions({ watermark: { visible: !!resolvedSymbol, text: displayName(currentSymbol) } });
+}
+
+// OHLC readout: the last bar by default, the hovered bar while the crosshair is on the chart.
+const legendEl = $('legend');
+function updateLegend(bar) {
+  const b = bar || latestCandles[latestCandles.length - 1];
+  if (!b) { legendEl.innerHTML = ''; return; }
+  const head = `<span class="lg-sym">${esc(displayName(currentSymbol))}</span><span class="lg-tag">${INTERVAL_LABEL[currentInterval] || esc(currentInterval)}</span>`;
+  const f = (v) => v.toFixed(2);
+  if (b.open === undefined || currentStyle === 'line' || currentStyle === 'area') {
+    legendEl.innerHTML = `${head}<span><span class="lg-k">C</span><span class="num">${f(b.close ?? b.value)}</span></span>`;
+    return;
+  }
+  const cls = b.close >= b.open ? 'up' : 'down';
+  legendEl.innerHTML = head + [['O', b.open], ['H', b.high], ['L', b.low], ['C', b.close]]
+    .map(([k, v]) => `<span><span class="lg-k">${k}</span><span class="num ${cls}">${f(v)}</span></span>`).join('');
+}
+chart.subscribeCrosshairMove((param) => {
+  const d = param.time ? param.seriesData.get(priceSeriesByStyle[currentStyle]) : null;
+  updateLegend(d || null);
+});
+
+// fitContent() butts the first candle against the left edge (half-clipped) and the newest
+// one against the price axis; a little air on both sides reads as finished.
+function fitWithPadding() {
+  // Set the padded range directly: reading the range back right after fitContent()
+  // returns the PREVIOUS view, and re-applying that would undo the fit.
+  chart.timeScale().setVisibleLogicalRange({ from: -1, to: latestCandles.length - 1 + 4 });
+}
+
+// ---------- data loading ----------
 // Aborting a superseded request (not just discarding its late response) matters
 // because the Flask dev server serializes requests and the browser caps concurrent
 // connections per host — a queue of stale requests can otherwise delay the one
@@ -273,23 +458,33 @@ async function loadCandles(opts = {}) {
   const myGeneration = ++loadGeneration;
   candlesAbortController?.abort();
   candlesAbortController = new AbortController();
-  const requestedInterval = opts.interval || document.getElementById('interval').value;
+  const requestedInterval = opts.interval || selectedInterval;
   const requestedRange = opts.range || currentRange;
   const preserve = opts.preserveView ? chart.timeScale().getVisibleRange() : null;
 
-  // A yfinance round-trip is ~1.5-2.5s — with no feedback that reads as "unresponsive"
-  // to an impatient click, even though the result is correct once it lands.
-  document.getElementById('note').textContent = 'Loading…';
+  // A yfinance round-trip takes a second or two — a progress bar keeps an impatient
+  // click from reading as "unresponsive".
+  setLoading(true);
+  $('note').textContent = '';
 
   let payload;
   try {
     const res = await fetch(`/api/candles?symbol=${encodeURIComponent(currentSymbol)}&interval=${requestedInterval}&range=${requestedRange}`, { signal: candlesAbortController.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     payload = await res.json();
   } catch (e) {
     if (e.name === 'AbortError') return; // superseded — a newer loadCandles() is handling things
-    throw e;
+    if (myGeneration === loadGeneration) {
+      setLoading(false);
+      unsuppressSoon();
+      // Keep whatever is already on screen; only take over the chart if there is nothing.
+      if (!latestCandles.length) showChartState(`Couldn't load ${currentSymbol}`, 'The data source didn\'t respond. Check your connection and try again.');
+      else toast(`Couldn't refresh ${currentSymbol} — showing the last data`, 'error');
+    }
+    return;
   }
   if (myGeneration !== loadGeneration) return; // belt-and-suspenders vs. the abort above
+
   // Keep locally-built live bars that are newer than anything Yahoo has published yet
   // (same symbol + interval only); Yahoo's bars replace everything up to its last one.
   const prevCandles = latestCandles;
@@ -309,25 +504,30 @@ async function loadCandles(opts = {}) {
   }
   currentInterval = payload.interval;
   currentRange = requestedRange;
-  document.querySelectorAll('#range-bar button[data-range]').forEach(b => b.classList.toggle('active', b.dataset.range === currentRange));
   resolvedSymbol = payload.symbol;
   historyOldestTime = latestCandles.length ? latestCandles[0].time : null;
   historyExhausted = false;
 
-  const note = document.getElementById('note');
-  if (payload.interval !== requestedInterval) {
-    note.textContent = `${requestedInterval} bars unavailable for ${requestedRange} — showing ${payload.interval}`;
-  } else {
-    note.textContent = '';
-  }
-  document.getElementById('interval').value = payload.interval;
+  setRangeUI(currentRange);
+  setIntervalUI(payload.interval);
+  $('note').textContent = payload.interval !== requestedInterval
+    ? `${INTERVAL_LABEL[requestedInterval] || requestedInterval} bars aren't available for ${requestedRange} — showing ${INTERVAL_LABEL[payload.interval] || payload.interval}`
+    : '';
 
   syncStyleData();
   renderIndicators();
   computeDayBoundaries();
   updateFuturesToggle();
-  if (preserve) chart.timeScale().setVisibleRange(preserve);
-  else chart.timeScale().fitContent();
+  updateWatermark();
+  updateLegend(null);
+  if (latestCandles.length) {
+    hideChartState();
+    if (preserve) chart.timeScale().setVisibleRange(preserve);
+    else fitWithPadding();
+  } else {
+    showChartState(`No data for ${currentSymbol}`, 'This symbol returned no bars for the selected range. Try a different range or symbol.');
+  }
+  setLoading(false);
   unsuppressSoon();
 }
 
@@ -338,6 +538,7 @@ async function loadMoreHistory() {
   const myGeneration = loadGeneration;
   try {
     const res = await fetch(`/api/candles/history?symbol=${encodeURIComponent(resolvedSymbol)}&interval=${currentInterval}&before=${historyOldestTime}`);
+    if (!res.ok) return;
     const payload = await res.json();
     if (myGeneration !== loadGeneration) return; // a fresh loadCandles() superseded this — discard
     // Defensive dedupe: only ever accept rows strictly older than what we already have,
@@ -357,7 +558,8 @@ async function loadMoreHistory() {
     if (prevRange) {
       chart.timeScale().setVisibleLogicalRange({ from: prevRange.from + addedCount, to: prevRange.to + addedCount });
     }
-  } finally {
+  } catch (e) { /* older history is a nicety — failing quietly is fine */ }
+  finally {
     loadingHistory = false;
     unsuppressSoon();
   }
@@ -368,24 +570,27 @@ chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
   if (range.from < 10) loadMoreHistory();
 });
 
+// ---------- live quotes ----------
 let lastPolledPrice = null;
 let quotesInFlight = 0;
 async function pollQuote() {
   quotesInFlight++;
-  // Same class of bug loadCandles had: a quote fetch for the PRE-switch symbol can
-  // resolve after the user has already switched, and without this guard it would
-  // overwrite the price display with the wrong symbol's number and even fold a wrong
-  // -symbol price into the current chart's last candle (via the 1D-fold below).
+  // A quote fetch for the PRE-switch symbol can resolve after the user has already
+  // switched; without this guard it would overwrite the price display with the wrong
+  // symbol's number and fold a wrong-symbol price into the current chart's last candle.
   const symbolAtRequest = currentSymbol;
   try {
     const res = await fetch(`/api/quote?symbol=${encodeURIComponent(symbolAtRequest)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const q = await res.json();
     if (symbolAtRequest !== currentSymbol) return;
-    const priceEl = document.getElementById('price');
-    const changeEl = document.getElementById('change');
+    const priceEl = $('price');
+    const changeEl = $('change');
+    const up = q.change >= 0;
     priceEl.textContent = q.price.toFixed(2);
-    changeEl.textContent = `${q.change >= 0 ? '+' : ''}${q.change.toFixed(2)} (${q.changePercent.toFixed(2)}%)`;
-    changeEl.className = q.change >= 0 ? 'up' : 'down';
+    changeEl.textContent = `${up ? '▲' : '▼'} ${up ? '+' : ''}${q.change.toFixed(2)} (${q.changePercent.toFixed(2)}%)`;
+    changeEl.className = `chip ${up ? 'up' : 'down'}`;
+    document.title = `${q.price.toFixed(2)} ${displayName(currentSymbol)} — Orazio`;
 
     if (lastPolledPrice !== null && q.price !== lastPolledPrice) {
       const dir = q.price > lastPolledPrice ? 'flash-up' : 'flash-down';
@@ -396,8 +601,9 @@ async function pollQuote() {
       tickChangedAt = q.time;
     }
     lastPolledPrice = q.price;
-    foldTickIntoChart(q.price, q.time);
-  } catch (e) { /* quote endpoint may be temporarily unavailable */ }
+    showFreshness(q);
+    foldTickIntoChart(q.price, q.time, q);
+  } catch (e) { setConn('err'); }
   finally { quotesInFlight--; }
 }
 
@@ -413,26 +619,31 @@ function pushLiveBar(bar, isNew) {
   else if (currentStyle === 'bar') barSeries.update(bar);
   else if (currentStyle === 'line') lineSeries.update({ time: bar.time, value: bar.close });
   else areaSeries.update({ time: bar.time, value: bar.close });
-  if (isNew && document.getElementById('vol').checked) {
-    volumeSeries.update({ time: bar.time, value: 0, color: 'rgba(38,166,154,0.5)' });
+  if (isNew && $('vol').checked) {
+    volumeSeries.update({ time: bar.time, value: 0, color: COLORS.volUp });
   }
+  updateLegend(null);
 }
 
-function foldTickIntoChart(price, nowSec) {
+function foldTickIntoChart(price, nowSec, q = {}) {
   if (!latestCandles.length) return;
   const last = latestCandles[latestCandles.length - 1];
   const step = INTERVAL_SECONDS[currentInterval];
-  // "Live" = the newest bar is recent. After the close (or on an old range) it isn't,
-  // and we must not paint today's price onto a stale bar or invent new ones.
-  const live = step ? (nowSec - last.time < 2 * step + 240)
-                    : (currentInterval === '1d' && nowSec - last.time < 86400);
-  if (!live) return;
+  // A quote is "fresh" when the exchange tick itself is recent. That — not the age of
+  // Yahoo's newest BAR — decides whether to open live candles: SENSEX bars from Yahoo are
+  // ~15 min old, but BSE's quote is current, so the live bar must still be allowed.
+  const fresh = q.delaySec !== null && q.delaySec !== undefined && q.delaySec < 180;
+  const recentBar = step ? (nowSec - last.time < 2 * step + 240)
+                         : (currentInterval === '1d' && nowSec - last.time < 86400);
+  if (!fresh && !recentBar) return; // market closed / stale everywhere: never paint onto old bars
 
-  // Anchor to the last bar's own grid (Yahoo's 1h bars start at :15, not :00).
-  const bucket = step ? last.time + Math.floor((nowSec - last.time) / step) * step : last.time;
-  // Only open a new bar while prices are actually moving, so a frozen post-close
+  // Bucket by the tick's own time when we have it, anchored to the last bar's grid
+  // (Yahoo's 1h bars start at :15, not :00) so bars stay aligned even across a data gap.
+  const tickSec = fresh && q.marketTime ? q.marketTime : nowSec;
+  const bucket = step ? last.time + Math.floor((tickSec - last.time) / step) * step : last.time;
+  // Only open a new bar while the feed is actually moving, so a frozen post-close
   // quote can't spawn phantom flat candles.
-  if (step && bucket > last.time && nowSec - tickChangedAt < 90) {
+  if (step && bucket > last.time && (fresh || nowSec - tickChangedAt < 90)) {
     const bar = { time: bucket, open: price, high: price, low: price, close: price, volume: 0 };
     latestCandles.push(bar);
     pushLiveBar(bar, true);
@@ -443,59 +654,79 @@ function foldTickIntoChart(price, nowSec) {
   pushLiveBar(updated, false);
 }
 
-const legend = document.getElementById('legend');
-chart.subscribeCrosshairMove(param => {
-  const activeSeries = priceSeriesByStyle[currentStyle];
-  if (!param.time || !param.seriesData.get(activeSeries)) {
-    const last = latestCandles[latestCandles.length - 1];
-    if (last) legend.innerHTML = `${currentSymbol} — O ${last.open.toFixed(2)} H ${last.high.toFixed(2)} L ${last.low.toFixed(2)} C ${last.close.toFixed(2)}`;
-    return;
-  }
-  const d = param.seriesData.get(activeSeries);
-  if (d.open !== undefined) {
-    legend.innerHTML = `${currentSymbol} — O ${d.open.toFixed(2)} H ${d.high.toFixed(2)} L ${d.low.toFixed(2)} C ${d.close.toFixed(2)}`;
-  } else {
-    legend.innerHTML = `${currentSymbol} — C ${d.value.toFixed(2)}`;
-  }
-});
-
-// --- symbol search ---
-const symbolInput = document.getElementById('symbol-input');
-const resultsBox = document.getElementById('symbol-results');
+// ---------- symbol search ----------
+const symbolInput = $('symbol-input');
+const resultsBox = $('symbol-results');
 let searchDebounce = null;
+let searchActive = -1;
+
+function closeResults() {
+  resultsBox.classList.remove('open');
+  symbolInput.setAttribute('aria-expanded', 'false');
+  symbolInput.removeAttribute('aria-activedescendant');
+  searchActive = -1;
+}
+function setActiveResult(i) {
+  const rows = resultsBox.querySelectorAll('.result');
+  if (!rows.length) return;
+  searchActive = (i + rows.length) % rows.length;
+  rows.forEach((r, idx) => r.classList.toggle('active', idx === searchActive));
+  symbolInput.setAttribute('aria-activedescendant', rows[searchActive].id);
+  rows[searchActive].scrollIntoView({ block: 'nearest' });
+}
+function chooseSymbol(symbol) {
+  clearTimeout(searchDebounce);
+  closeResults();
+  symbolInput.value = symbol;
+  symbolInput.blur();
+  switchSymbol(symbol);
+}
 
 symbolInput.addEventListener('input', () => {
   clearTimeout(searchDebounce);
   const q = symbolInput.value.trim();
-  if (q.length < 1) { resultsBox.style.display = 'none'; return; }
+  if (q.length < 1) { closeResults(); return; }
   searchDebounce = setTimeout(async () => {
-    const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-    const items = await res.json();
-    if (!items.length) { resultsBox.style.display = 'none'; return; }
-    resultsBox.innerHTML = items.map(it =>
-      `<div data-symbol="${it.symbol}">${it.symbol} <span class="sym-name">${it.name || ''} · ${it.exchange || ''}</span></div>`
-    ).join('');
-    resultsBox.style.display = 'block';
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+      if (!res.ok) throw new Error();
+      const items = await res.json();
+      if (!items.length) { closeResults(); return; }
+      resultsBox.innerHTML = items.map((it, i) =>
+        `<div class="result" role="option" id="sr-${i}" data-symbol="${esc(it.symbol)}"><span class="sym">${esc(it.symbol)}</span><span class="nm">${esc(it.name || '')}</span><span class="ex">${esc(it.exchange || '')}</span></div>`
+      ).join('');
+      resultsBox.classList.add('open');
+      symbolInput.setAttribute('aria-expanded', 'true');
+      searchActive = -1;
+    } catch (e) { closeResults(); }
   }, 300);
 });
 
-resultsBox.addEventListener('click', (e) => {
-  const row = e.target.closest('div[data-symbol]');
+resultsBox.addEventListener('mousedown', (e) => {
+  const row = e.target.closest('.result');
   if (!row) return;
-  clearTimeout(searchDebounce);
-  symbolInput.value = row.dataset.symbol;
-  resultsBox.style.display = 'none';
-  switchSymbol(row.dataset.symbol);
+  e.preventDefault();
+  chooseSymbol(row.dataset.symbol);
 });
 
 symbolInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
+  if (e.key === 'ArrowDown') { e.preventDefault(); setActiveResult(searchActive + 1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveResult(searchActive - 1); }
+  else if (e.key === 'Escape') { closeResults(); symbolInput.blur(); }
+  else if (e.key === 'Enter') {
     // Cancel any pending debounced search fetch — otherwise it can resolve after
     // Enter closes the dropdown and reopen it with stale results.
     clearTimeout(searchDebounce);
-    resultsBox.style.display = 'none';
-    switchSymbol(symbolInput.value.trim());
+    const active = resultsBox.querySelector('.result.active');
+    chooseSymbol(active ? active.dataset.symbol : symbolInput.value.trim());
   }
+});
+symbolInput.addEventListener('focus', () => symbolInput.select());
+document.addEventListener('click', (e) => { if (!e.target.closest('.search')) closeResults(); });
+
+// "/" jumps to search from anywhere (unless you're already typing in a field).
+document.addEventListener('keydown', (e) => {
+  if (e.key === '/' && !e.target.closest('input, select, textarea')) { e.preventDefault(); symbolInput.focus(); }
 });
 
 function switchSymbol(symbol) {
@@ -503,43 +734,66 @@ function switchSymbol(symbol) {
   currentSymbol = symbol.toUpperCase();
   lastPolledPrice = null;
   tickChangedAt = 0;
+  savePrefs();
   loadCandles();
   pollQuote();
   highlightRail();
 }
 
-// --- futures toggle (cash <-> futures, only for symbols yfinance actually covers) ---
+// ---------- futures toggle (cash <-> futures, only for symbols yfinance actually covers) ----------
 function futuresCounterpart(sym) {
   if (CONFIG.futuresMap[sym]) return { mode: 'cash', to: CONFIG.futuresMap[sym] };
   const cash = Object.keys(CONFIG.futuresMap).find(k => CONFIG.futuresMap[k] === sym);
-  return cash ? { mode: 'futures', to: cash } : null;
+  // Go back via the friendly alias (SPX) rather than the raw ticker (^GSPC).
+  return cash ? { mode: 'futures', to: (CONFIG.futuresMeta[sym] || {}).alias || cash } : null;
 }
 
 function updateFuturesToggle() {
-  const wrap = document.getElementById('futures-toggle');
-  const box = document.getElementById('futures');
   const info = resolvedSymbol ? futuresCounterpart(resolvedSymbol) : null;
-  wrap.classList.toggle('shown', !!info);
-  box.checked = !!info && info.mode === 'futures';
+  $('futures-toggle').classList.toggle('shown', !!info);
+  $('futures').checked = !!info && info.mode === 'futures';
+  // Keep the search box readable when the symbol is a raw futures ticker.
+  if (document.activeElement !== symbolInput && CONFIG.futuresMeta[currentSymbol]) symbolInput.value = displayName(currentSymbol);
 }
 
-document.getElementById('futures').addEventListener('change', () => {
+$('futures').addEventListener('change', () => {
   const info = resolvedSymbol ? futuresCounterpart(resolvedSymbol) : null;
-  if (info) switchSymbol(info.to);
+  if (info) { symbolInput.value = displayName(info.to); switchSymbol(info.to); }
 });
 
-// --- left index rail ---
+// ---------- left index rail ----------
+const INDEX_META = {
+  NIFTY: ['Nifty 50', 'India'], BANKNIFTY: ['Bank Nifty', 'India'], NIFTYIT: ['Nifty IT', 'India'], SENSEX: ['BSE Sensex', 'India'],
+  SPX: ['S&P 500', 'US'], NASDAQ: ['Nasdaq Composite', 'US'], DOWJONES: ['Dow Jones', 'US'],
+  KOSPI: ['KOSPI', 'Asia'], TAIEX: ['Taiwan Weighted', 'Asia'], CHINA: ['CSI 300', 'Asia'], SSE: ['Shanghai Composite', 'Asia'],
+};
+const RAIL_GROUPS = ['India', 'US', 'Asia', 'Other'];
+
 function highlightRail() {
-  document.querySelectorAll('#rail button').forEach(b => b.classList.toggle('active', b.dataset.sym === currentSymbol));
+  // While on ES=F the rail should still show SPX as the active index.
+  const active = (CONFIG.futuresMeta[currentSymbol] || {}).alias || currentSymbol;
+  document.querySelectorAll('.rail-item').forEach(b => {
+    b.setAttribute('aria-current', String(b.dataset.sym === active));
+  });
 }
 
 async function loadConfig() {
-  const res = await fetch('/api/config');
-  CONFIG = await res.json();
-  const rail = document.getElementById('rail');
-  rail.innerHTML = CONFIG.quickIndices.map(sym => `<button data-sym="${sym}">${sym}</button>`).join('');
-  rail.addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-sym]');
+  try {
+    const res = await fetch('/api/config');
+    if (!res.ok) throw new Error();
+    CONFIG = await res.json();
+  } catch (e) {
+    toast('Couldn\'t load the index list — search still works', 'error');
+    return;
+  }
+  const byGroup = Object.fromEntries(RAIL_GROUPS.map(g => [g, []]));
+  for (const sym of CONFIG.quickIndices) byGroup[(INDEX_META[sym] || [null, 'Other'])[1]].push(sym);
+  $('rail-groups').innerHTML = RAIL_GROUPS.filter(g => byGroup[g].length).map(g =>
+    `<div class="rail-group"><div class="rail-title">${g}</div>${byGroup[g].map(sym =>
+      `<button type="button" class="rail-item" data-sym="${esc(sym)}"><span class="rail-sym">${esc(sym)}</span><span class="rail-name">${esc((INDEX_META[sym] || [sym])[0])}</span></button>`
+    ).join('')}</div>`).join('');
+  $('rail-groups').addEventListener('click', (e) => {
+    const btn = e.target.closest('.rail-item');
     if (!btn) return;
     symbolInput.value = btn.dataset.sym;
     switchSymbol(btn.dataset.sym);
@@ -547,43 +801,528 @@ async function loadConfig() {
   highlightRail();
 }
 
-// --- options premium panel ---
-const optionsModal = document.getElementById('options-modal');
-document.getElementById('options-btn').addEventListener('click', () => openOptions());
-document.getElementById('options-close').addEventListener('click', () => optionsModal.classList.remove('open'));
+// ---------- call auction session (CAS) ----------
+// Pre-open (09:00-09:15 IST) is real price discovery: NSE publishes each stock's
+// indicative equilibrium price and the index level it implies. The 15:40-16:00
+// closing session is NOT discovery — it trades at the already-set close — so there
+// the meaningful number is the indicative/official close, not an IEP.
+let casTimer = null, casPhase = null, casSeconds = null, casPollAt = 0, casStatus = '', casStage = '';
+
+function fmtCountdown(sec) {
+  if (sec === null || sec === undefined) return '';
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), r = sec % 60;
+  if (h) return `${h}h ${m}m`;
+  if (m) return `${m}m ${String(r).padStart(2, '0')}s`;
+  return `${r}s`;
+}
+
+const CAS_PHASE_NAME = { 'pre-open': 'Pre-open', 'closing-auction': 'Closing auction', 'post-market': 'Post-market', 'post-close': 'Post-close', 'auction': 'Auction' };
+function renderCasPhase() {
+  const el = $('cas-phase');
+  const live = casPhase in CAS_PHASE_NAME;
+  el.dataset.live = String(live);
+  // NSE's own wording, so a session our clock windows don't know about is still named right.
+  el.title = [casStage, casStatus].filter(Boolean).join(' · ');
+  if (live) {
+    const name = CAS_PHASE_NAME[casPhase];
+    el.textContent = casSeconds === null || casSeconds === undefined
+      ? `${name} · running` : `${name} · ${fmtCountdown(casSeconds)} left`;
+  } else if (casSeconds !== null && casSeconds !== undefined) {
+    const next = CAS_PHASE_NAME[(casPhase || '').split(':')[1]] || 'Pre-open';
+    el.textContent = `${next} in ${fmtCountdown(casSeconds)}`;
+  } else {
+    el.textContent = 'Next session';
+  }
+}
+
+async function loadCas() {
+  let d;
+  try {
+    const res = await fetch('/api/cas');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    d = await res.json();
+  } catch (e) {
+    $('cas-note').textContent = "Auction feed unreachable — retrying.";
+    return;
+  }
+  casPhase = d.phase;
+  casSeconds = d.secondsRemaining;
+  casStatus = d.nseStatus || '';
+  casStage = d.stage || '';
+  $('cas-stage').textContent = casStage;
+  $('cas-stage').hidden = !casStage;
+  casPollAt = Date.now();
+  renderCasPhase();
+
+  // Which number matters depends on the phase.
+  const mode = (d.phase === 'closing-auction' || d.phase === 'post-market' || d.phase === 'post-close') ? 'close' : 'open';
+  const available = d.indices.filter(r => r.available);
+  const missing = d.indices.filter(r => !r.available);
+
+  $('cas-rows').innerHTML = available.map(r => {
+    const value = mode === 'close' ? (r.indicativeClose ?? r.last) : (r.open ?? r.last);
+    const pct = mode === 'close' ? r.indicativeClosePct : r.openChangePct;
+    const isAuction = mode === 'close' ? r.indicativeClose !== null : r.open !== null;
+    const cls = pct === null || pct === undefined ? '' : pct >= 0 ? 'up' : 'down';
+    const tag = mode === 'close' ? (r.indicativeClose !== null ? 'ICL' : 'LTP') : (r.open !== null ? 'Open' : 'LTP');
+    return `<div class="cas-row${isAuction ? '' : ' muted'}">
+      <span class="cas-sym">${esc(r.alias)}</span>
+      <span class="cas-tag" title="${mode === 'close' ? 'Indicative close' : 'Auction-discovered open'}">${tag}</span>
+      <span class="cas-val num">${value === null || value === undefined ? '–' : Number(value).toFixed(2)}</span>
+      <span class="cas-chg num ${cls}">${pct === null || pct === undefined ? '' : (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%'}</span>
+    </div>`;
+  }).join('');
+
+  const b = d.breadth;
+  const breadthEl = $('cas-breadth');
+  breadthEl.hidden = !b;
+  if (b) {
+    breadthEl.innerHTML = `<span class="up">${b.advances ?? '–'} ▲</span><span class="down">${b.declines ?? '–'} ▼</span><span>${b.unchanged ?? '–'} –</span>`;
+    breadthEl.title = `F&O universe at ${b.asOf || 'pre-open'}`;
+  }
+
+  $('cas-note').textContent = missing.length
+    ? `No public auction feed: ${missing.map(r => r.alias).join(', ')}`
+    : '';
+}
+
+// Tick the countdown locally; re-poll fast inside a window, slowly outside one.
+setInterval(() => {
+  if (casSeconds !== null && casSeconds !== undefined) {
+    const elapsed = Math.floor((Date.now() - casPollAt) / 1000);
+    const left = casSeconds - elapsed;
+    if (left >= 0) { const keep = casSeconds; casSeconds = left; renderCasPhase(); casSeconds = keep; }
+  }
+}, 1000);
+setInterval(() => {
+  const live = casPhase === 'pre-open' || casPhase === 'post-close';
+  if (live || Date.now() - casPollAt > 60000) loadCas();
+}, 5000);
+
+$('cas-toggle').addEventListener('click', () => {
+  const open = $('cas-toggle').getAttribute('aria-expanded') === 'true';
+  $('cas-toggle').setAttribute('aria-expanded', String(!open));
+  $('cas').classList.toggle('collapsed', open);
+  try { localStorage.setItem('orazio.cas.collapsed', String(open)); } catch (e) { /* private mode */ }
+});
+
+// ---------- call auction: live movement (Indian indices, one quadrant each) ----------
+// Every chart is measured against the REFERENCE: the last value at 15:14:59, the final traded
+// value before continuous trading stops. A baseline series draws green above it, red below it.
+const moveModal = $('move-modal');
+let movePoll = null, moveTrigger = null;
+const moveCharts = {};
+const MOVE_INDICES = [
+  ['NIFTY', 'Nifty 50'], ['BANKNIFTY', 'Bank Nifty'],
+  ['NIFTYIT', 'Nifty IT'], ['SENSEX', 'BSE Sensex'],
+];
+const istHms = new Intl.DateTimeFormat('en-GB', { timeZone: IST, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+
+// Epoch seconds of HH:MM today in IST.
+function istToday(h, m, sec = 0) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return Date.parse(`${dayKey(Date.now() / 1000)}T${pad(h)}:${pad(m)}:${pad(sec)}+05:30`) / 1000;
+}
+
+function buildQuads() {
+  $('move-grid').innerHTML = MOVE_INDICES.map(([alias, name]) => `
+    <section class="quad" data-alias="${alias}">
+      <header class="quad-head">
+        <div class="quad-id"><b>${alias}</b><span>${esc(name)}</span></div>
+        <div class="quad-val"><span class="num quad-num">–</span><span class="num quad-delta">–</span></div>
+        <em class="move-tag">Last</em>
+      </header>
+      <div class="quad-chart" id="quad-chart-${alias}"></div>
+      <footer class="quad-foot"><span class="quad-ref">Reference locks at 15:14:59</span><span class="quad-src"></span></footer>
+    </section>`).join('');
+
+  for (const [alias] of MOVE_INDICES) {
+    const chart = LightweightCharts.createChart($(`quad-chart-${alias}`), {
+      autoSize: true,
+      layout: { background: { color: COLORS.bg }, textColor: COLORS.text, fontFamily: token('--font'), fontSize: 11 },
+      grid: { vertLines: { color: COLORS.grid }, horzLines: { color: COLORS.grid } },
+      crosshair: { mode: LightweightCharts.CrosshairMode.Normal,
+        vertLine: { color: COLORS.border, labelBackgroundColor: token('--bg-3') },
+        horzLine: { color: COLORS.border, labelBackgroundColor: token('--bg-3') } },
+      rightPriceScale: { borderColor: COLORS.border, scaleMargins: { top: 0.12, bottom: 0.12 } },
+      timeScale: { borderColor: COLORS.border, timeVisible: true, secondsVisible: false, rightOffset: 0, fixLeftEdge: true, fixRightEdge: true,
+        tickMarkFormatter: (t) => timeFmt.format(new Date(t * 1000)) },
+      localization: { timeFormatter: (t) => istHms.format(new Date(t * 1000)) + ' IST' },
+    });
+    const series = chart.addBaselineSeries({
+      baseValue: { type: 'price', price: 0 },
+      topLineColor: COLORS.up, bottomLineColor: COLORS.down, lineWidth: 2,
+      topFillColor1: alpha(COLORS.up, 0.32), topFillColor2: alpha(COLORS.up, 0.04),
+      bottomFillColor1: alpha(COLORS.down, 0.04), bottomFillColor2: alpha(COLORS.down, 0.32),
+      priceLineVisible: false, lastValueVisible: true,
+    });
+    moveCharts[alias] = { chart, series, refLine: null, refValue: null };
+  }
+}
+
+function destroyQuads() {
+  for (const k of Object.keys(moveCharts)) { moveCharts[k].chart.remove(); delete moveCharts[k]; }
+  $('move-grid').innerHTML = '';
+}
+
+// One point per second, forward-filled, then whitespace to 15:36 — so the x-axis is proportional
+// to real time (a 2/s stream and an 11s tick would otherwise be spaced by index, not time).
+function timeline(points, from, to, nowSec) {
+  const byT = new Map();
+  for (const p of points) {
+    const v = (p[2] !== null && p[2] !== undefined) ? p[2] : p[1];
+    if (v !== null && v !== undefined) byT.set(Math.floor(p[0]), v);
+  }
+  const data = [];
+  let carry = null;
+  const known = [...byT.keys()].sort((a, b) => a - b);
+  let ki = 0;
+  for (let t = from; t <= to; t++) {
+    while (ki < known.length && known[ki] <= t) { carry = byT.get(known[ki]); ki++; }
+    if (t > nowSec) data.push({ time: t });
+    else if (carry !== null) data.push({ time: t, value: carry });
+  }
+  return data;
+}
+
+function renderMove(d) {
+  const live = ['pre-open', 'closing-auction', 'post-market'].includes(d.phase);
+  const pill = $('move-pill');
+  pill.dataset.live = String(live);
+  pill.textContent = live
+    ? `${CAS_PHASE_NAME[d.phase] || d.phase} · ${d.secondsRemaining == null ? 'running' : fmtCountdown(d.secondsRemaining) + ' left'}`
+    : `Auction starts 15:15 · ${d.nseStatus || 'watching'}`;
+  pill.title = d.stage || '';
+  $('move-strip').innerHTML =
+    (d.stage ? `<span class="feed-stage">${esc(d.stage)}</span>` : '') +
+    `<span>Measured against the last value at <b>15:14:59</b> · green above, red below</span>` +
+    `<span class="feed-strip-val">BSE stream: ${d.stream.connected ? '<span class="up">connected</span>' : '<span class="down">down — using REST</span>'}</span>`;
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  const from = istToday(15, 10), to = istToday(15, 36);
+  for (const idx of d.indices) {
+    const q = moveCharts[idx.alias];
+    const card = document.querySelector(`.quad[data-alias="${idx.alias}"]`);
+    if (!q || !card) continue;
+
+    const ref = idx.reference ? idx.reference.value : null;
+    const cur = (idx.indicative !== null && idx.indicative !== undefined) ? idx.indicative : idx.last;
+    const isInd = idx.indicative !== null && idx.indicative !== undefined;
+
+    // baseline = the reference once locked; before that, the current value keeps the line neutral
+    q.series.applyOptions({ baseValue: { type: 'price', price: ref !== null ? ref : (cur ?? 0) } });
+    q.series.setData(timeline(idx.points, from, to, nowSec));
+    if (q.refValue !== ref) {
+      if (q.refLine) q.series.removePriceLine(q.refLine);
+      q.refLine = ref !== null ? q.series.createPriceLine({ price: ref, color: '#98a2b3', lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: 'REF 15:14:59' }) : null;
+      q.refValue = ref;
+    }
+    try { q.chart.timeScale().setVisibleRange({ from, to }); } catch (e) { /* no data yet */ }
+
+    card.querySelector('.quad-num').textContent = cur === null || cur === undefined ? '–' : Number(cur).toFixed(2);
+    const delta = card.querySelector('.quad-delta');
+    if (ref !== null && cur !== null && cur !== undefined) {
+      const diff = cur - ref, pct = diff / ref * 100, up = diff >= 0;
+      delta.className = `num quad-delta ${up ? 'up' : 'down'}`;
+      delta.textContent = `${up ? '▲ +' : '▼ '}${diff.toFixed(2)} pts  (${up ? '+' : ''}${pct.toFixed(3)}%)`;
+    } else {
+      delta.className = 'num quad-delta';
+      delta.textContent = d.referenceLocked ? 'reference unavailable' : 'awaiting reference';
+    }
+    const tag = card.querySelector('.move-tag');
+    tag.textContent = isInd ? 'Indicative' : 'Last';
+    tag.classList.toggle('ind', isInd);
+    card.querySelector('.quad-ref').textContent = ref !== null
+      ? `Reference ${Number(ref).toFixed(2)} · ${idx.reference.source}`
+      : (d.referenceLocked ? 'Reference could not be determined' : 'Reference locks at 15:14:59');
+    card.querySelector('.quad-src').textContent = idx.available ? `${idx.source} · ${idx.points.length} pts` : 'waiting for first tick';
+  }
+}
+
+async function loadMove() {
+  try {
+    const res = await fetch('/api/cas/movement');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    renderMove(await res.json());
+  } catch (e) { /* keep the last frame; the next poll retries */ }
+}
+function openMove() {
+  moveTrigger = document.activeElement;
+  moveModal.classList.add('open');
+  $('move-close').focus();
+  destroyQuads();
+  buildQuads();
+  loadMove();
+  clearInterval(movePoll);
+  movePoll = setInterval(loadMove, 2000);
+}
+function closeMove() {
+  moveModal.classList.remove('open');
+  clearInterval(movePoll); movePoll = null;
+  destroyQuads();
+  moveTrigger?.focus();
+}
+$('cas-move-open').addEventListener('click', openMove);
+$('move-close').addEventListener('click', closeMove);
+moveModal.addEventListener('mousedown', (e) => { if (e.target === moveModal) closeMove(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && moveModal.classList.contains('open')) closeMove(); });
+
+// ---------- call auction: live feed window ----------
+// NSE keeps serving the last window's snapshot after pre-open closes, so every view
+// states whether it is live or a snapshot and when it was stamped.
+const feedModal = $('feed-modal');
+let feedRows = [], feedKey = 'FO', feedFilter = '', feedLadderFor = null;
+let feedSort = { key: 'pChange', dir: -1 };
+let feedLadderHtml = '';  // survives the 3s table re-render so the book doesn't flicker
+let feedPoll = null, feedTrigger = null;
+
+// Pre-open and the closing auction are different NSE feeds with different fields.
+const PRE_COLS = [
+  { key: 'symbol', label: 'Symbol', align: 'left' },
+  { key: 'iep', label: 'IEP', dp: 2 },
+  { key: 'pChange', label: 'Chg %', dp: 2, signed: true },
+  { key: 'finalQuantity', label: 'Qty' },
+  { key: 'buyQty', label: 'Buy' },
+  { key: 'sellQty', label: 'Sell' },
+  { key: 'atoBuy', label: 'ATO B' },
+  { key: 'atoSell', label: 'ATO S' },
+];
+const CAS_COLS = [
+  { key: 'symbol', label: 'Symbol', align: 'left' },
+  { key: 'refPrice', label: 'Ref price', dp: 2 },
+  { key: 'iep', label: 'IEP', dp: 2 },
+  { key: 'pChange', label: 'Chg %', dp: 2, signed: true },
+  { key: 'imbalanceEP', label: 'Imbalance @EP', plus: true },
+  { key: 'imbalanceMO', label: 'Imbalance MO', plus: true },
+  { key: 'buyQty', label: 'Total buy' },
+  { key: 'sellQty', label: 'Total sell' },
+  { key: 'lowerBand', label: 'Low band', dp: 2 },
+  { key: 'upperBand', label: 'High band', dp: 2 },
+];
+let FEED_COLS = PRE_COLS;
+const nfmt = new Intl.NumberFormat('en-IN');
+const fcell = (v, c) => v === null || v === undefined ? '–'
+  : c.dp !== undefined ? (c.signed && v >= 0 ? '+' : '') + Number(v).toFixed(c.dp)
+  : c.plus ? (v > 0 ? '+' : '') + nfmt.format(v)
+  : nfmt.format(v);
+
+function openCasFeed() {
+  feedTrigger = document.activeElement;
+  feedModal.classList.add('open');
+  $('feed-close').focus();
+  loadCasFeed();
+  clearInterval(feedPoll);
+  feedPoll = setInterval(loadCasFeed, 3000);
+}
+function closeCasFeed() {
+  feedModal.classList.remove('open');
+  clearInterval(feedPoll);
+  feedPoll = null;
+  feedTrigger?.focus();
+}
+
+async function loadCasFeed() {
+  let d;
+  try {
+    const res = await fetch(`/api/cas/feed?key=${feedKey}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    d = await res.json();
+  } catch (e) {
+    $('feed-body').innerHTML = '<div class="empty-note">Auction feed unreachable — retrying.</div>';
+    return;
+  }
+  if (!d.available) {
+    $('feed-body').innerHTML = `<div class="empty-note">${esc(d.reason || 'Feed unavailable')}</div>`;
+    return;
+  }
+  feedRows = d.rows;
+  const isCas = d.source === 'cas';
+  FEED_COLS = isCas ? CAS_COLS : PRE_COLS;
+  $('feed-title').textContent = isCas ? 'Closing Auction (CAS) · live feed' : 'Pre-open Auction · feed';
+  // The F&O/All universe switch only applies to the pre-open feed; CAS is the F&O names.
+  $('feed-universe').hidden = isCas;
+
+  const pill = $('feed-pill');
+  pill.dataset.live = String(!!d.live);
+  if (d.live) {
+    const left = d.secondsRemaining === null || d.secondsRemaining === undefined ? 'running' : `${fmtCountdown(d.secondsRemaining)} left`;
+    pill.textContent = `Live · ${left}`;
+    pill.title = d.stage || (isCas ? 'Closing auction is running' : 'Pre-open auction is running');
+  } else {
+    pill.textContent = `Snapshot · ${d.asOf || ''}`;
+    pill.title = 'No auction is running; NSE is still serving the last window\'s snapshot';
+  }
+
+  const strip = $('feed-strip');
+  if (isCas) {
+    const t = d.totals || {};
+    strip.innerHTML =
+      (d.stage ? `<span class="feed-stage">${esc(d.stage)}</span>` : '') +
+      `<span>${d.eligible ?? '–'} eligible F&amp;O stocks</span>` +
+      `<span>Indicative qty ${t.indicativeQuantity ? nfmt.format(t.indicativeQuantity) : '–'}</span>` +
+      `<span title="Positive = more buy interest than sell at the indicative price">Imbalance: <span class="up">+ buy surplus</span> / <span class="down">− sell surplus</span></span>` +
+      `<span class="feed-strip-val">${d.statusMsg ? esc(d.statusMsg) : (d.status ? esc(d.status) : '')}</span>`;
+  } else {
+    const b = d.breadth || {};
+    strip.innerHTML =
+      `<span class="up">${b.advances ?? '–'} advancing</span>` +
+      `<span class="down">${b.declines ?? '–'} declining</span>` +
+      `<span>${b.unchanged ?? '–'} unchanged</span>` +
+      `<span class="feed-strip-val">Traded ₹${b.tradedValue ? nfmt.format(Math.round(b.tradedValue / 1e7)) + ' Cr' : '–'}</span>`;
+  }
+
+  if (!d.rows.length && d.note) { $('feed-body').innerHTML = `<div class="empty-note">${esc(d.note)}</div>`; return; }
+  renderFeedTable();
+  // If a ladder is open, keep it in step with the table.
+  if (feedLadderFor) loadLadder(feedLadderFor, true);
+}
+
+function renderFeedTable() {
+  const q = feedFilter.trim().toUpperCase();
+  const rows = feedRows
+    .filter(r => !q || r.symbol.includes(q))
+    .sort((a, b) => {
+      const x = a[feedSort.key], y = b[feedSort.key];
+      if (x === null || x === undefined) return 1;
+      if (y === null || y === undefined) return -1;
+      return (typeof x === 'string' ? x.localeCompare(y) : x - y) * feedSort.dir;
+    });
+
+  if (!rows.length) { $('feed-body').innerHTML = '<div class="empty-note">No symbols match that filter.</div>'; return; }
+
+  const head = FEED_COLS.map(c =>
+    `<th class="${c.align === 'left' ? 'l' : ''}" data-sort="${c.key}" aria-sort="${feedSort.key === c.key ? (feedSort.dir === 1 ? 'ascending' : 'descending') : 'none'}">${c.label}${feedSort.key === c.key ? (feedSort.dir === 1 ? ' ▲' : ' ▼') : ''}</th>`
+  ).join('');
+
+  const body = rows.map(r => {
+    const cls = r.pChange === null || r.pChange === undefined ? '' : r.pChange >= 0 ? 'up' : 'down';
+    const cells = FEED_COLS.map(c => {
+      if (c.key === 'symbol') return `<td class="l"><strong>${esc(r.symbol)}</strong></td>`;
+      // imbalance: positive = buy surplus (green), negative = sell surplus (red)
+      const tone = c.plus ? (r[c.key] > 0 ? 'up' : r[c.key] < 0 ? 'down' : '') : (c.key === 'pChange' ? cls : '');
+      return `<td class="${tone}">${fcell(r[c.key], c)}</td>`;
+    }).join('');
+    const ladder = feedLadderFor === r.symbol
+      ? `<tr class="ladder-row"><td colspan="${FEED_COLS.length}"><div id="ladder-box">${feedLadderHtml || 'Loading order book…'}</div></td></tr>` : '';
+    return `<tr class="feed-row${feedLadderFor === r.symbol ? ' open' : ''}" data-symbol="${esc(r.symbol)}">${cells}</tr>${ladder}`;
+  }).join('');
+
+  $('feed-body').innerHTML = `<table class="opt-table feed-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+async function loadLadder(symbol, silent) {
+  feedLadderFor = symbol;
+  if (!silent) renderFeedTable();
+  let d;
+  try {
+    const res = await fetch(`/api/cas/feed?symbol=${encodeURIComponent(symbol)}`);
+    d = await res.json();
+  } catch (e) { d = null; }
+  const box = $('ladder-box');
+  if (!box) return;
+  if (!d || !d.available || !d.ladder.length) { feedLadderHtml = '<em>No order book for this symbol.</em>'; box.innerHTML = feedLadderHtml; return; }
+  const maxQty = Math.max(...d.ladder.map(r => Math.max(r.buyQty || 0, r.sellQty || 0)), 1);
+  feedLadderHtml = `<div class="ladder">${d.ladder.map(r => `
+    <div class="rung${r.isIep ? ' iep' : ''}">
+      <span class="rq buy"><i style="width:${r.buyQty ? Math.max(2, Math.round(r.buyQty / maxQty * 100)) : 0}%"></i><b>${r.buyQty ? nfmt.format(r.buyQty) : ''}</b></span>
+      <span class="rp num">${Number(r.price).toFixed(2)}${r.isIep ? ' ◂ IEP' : ''}${r.flag ? ` <small class="rflag" title="NSE flag, shown as published">${esc(r.flag)}</small>` : ''}</span>
+      <span class="rq sell"><i style="width:${r.sellQty ? Math.max(2, Math.round(r.sellQty / maxQty * 100)) : 0}%"></i><b>${r.sellQty ? nfmt.format(r.sellQty) : ''}</b></span>
+    </div>`).join('')}</div>
+    <div class="ladder-foot">${d.source === 'cas' ? `Indicative ${d.iep ?? '–'}` : `ATO buy ${nfmt.format(d.atoBuy || 0)} · ATO sell ${nfmt.format(d.atoSell || 0)}`} · updated ${esc(d.updated || '')}</div>`;
+  box.innerHTML = feedLadderHtml;
+}
+
+$('cas-open').addEventListener('click', openCasFeed);
+$('feed-close').addEventListener('click', closeCasFeed);
+feedModal.addEventListener('mousedown', (e) => { if (e.target === feedModal) closeCasFeed(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && feedModal.classList.contains('open')) closeCasFeed(); });
+$('feed-filter').addEventListener('input', (e) => { feedFilter = e.target.value; renderFeedTable(); });
+$('feed-universe').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-key]');
+  if (!btn) return;
+  feedKey = btn.dataset.key;
+  document.querySelectorAll('#feed-universe button').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+  loadCasFeed();
+});
+$('feed-body').addEventListener('click', (e) => {
+  const th = e.target.closest('th[data-sort]');
+  if (th) {
+    const key = th.dataset.sort;
+    feedSort = { key, dir: feedSort.key === key ? -feedSort.dir : (key === 'symbol' ? 1 : -1) };
+    renderFeedTable();
+    return;
+  }
+  const row = e.target.closest('.feed-row');
+  if (row) {
+    const sym = row.dataset.symbol;
+    if (feedLadderFor === sym) { feedLadderFor = null; feedLadderHtml = ''; renderFeedTable(); }
+    else { feedLadderHtml = ''; loadLadder(sym); }
+  }
+});
+
+// ---------- options panel ----------
+const optionsModal = $('options-modal');
+let optionsTrigger = null;
+function closeOptions() {
+  optionsModal.classList.remove('open');
+  optionsTrigger?.focus();
+}
+$('options-btn').addEventListener('click', () => { optionsTrigger = $('options-btn'); openOptions(); });
+$('options-close').addEventListener('click', closeOptions);
+optionsModal.addEventListener('mousedown', (e) => { if (e.target === optionsModal) closeOptions(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && optionsModal.classList.contains('open')) closeOptions(); });
+$('expiry-select').addEventListener('change', (e) => openOptions(e.target.value));
 
 async function openOptions(expiry) {
   optionsModal.classList.add('open');
-  const body = document.getElementById('options-body');
-  document.getElementById('options-title').textContent = `Options — ${resolvedSymbol || currentSymbol}`;
-  body.innerHTML = 'Loading…';
+  const body = $('options-body');
   const sym = resolvedSymbol || currentSymbol;
-  const url = `/api/options?symbol=${encodeURIComponent(sym)}` + (expiry ? `&expiry=${encodeURIComponent(expiry)}` : '');
-  const res = await fetch(url);
-  const data = await res.json();
-  if (!data.available) {
-    body.innerHTML = `<div id="options-unavailable">Options data unavailable for ${sym}${data.reason ? ' — ' + data.reason : ''}.</div>`;
+  $('options-title').textContent = `Options · ${displayName(sym)}`;
+  if (!expiry) $('options-close').focus();
+  body.innerHTML = '<div class="empty-note">Loading option chain…</div>';
+  let data;
+  try {
+    const url = `/api/options?symbol=${encodeURIComponent(sym)}` + (expiry ? `&expiry=${encodeURIComponent(expiry)}` : '');
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    data = await res.json();
+  } catch (e) {
+    $('expiry-select').hidden = true;
+    body.innerHTML = '<div class="empty-note">Couldn\'t load the option chain. Try again in a moment.</div>';
     return;
   }
-  const fmt = (v) => v === null || v === undefined ? '-' : v;
-  const table = (label, rows) => `<h3>${label}</h3><table><thead><tr>
+  if (!data.available) {
+    $('expiry-select').hidden = true;
+    body.innerHTML = `<div class="empty-note"><strong>Options aren't available for ${esc(sym)}.</strong><br>${esc(data.reason || 'The data provider has no option chain for this symbol.')}</div>`;
+    return;
+  }
+  const expirySelect = $('expiry-select');
+  expirySelect.innerHTML = data.expiries.map(e => `<option value="${esc(e)}" ${e === data.expiry ? 'selected' : ''}>${esc(e)}</option>`).join('');
+  expirySelect.hidden = false;
+
+  const nf = new Intl.NumberFormat('en-US');
+  const fmt = (v, dp) => v === null || v === undefined ? '–' : (dp === undefined ? nf.format(v) : v.toFixed(dp));
+  const atm = lastPolledPrice && data.calls.length
+    ? data.calls.reduce((best, r) => Math.abs(r.strike - lastPolledPrice) < Math.abs(best - lastPolledPrice) ? r.strike : best, data.calls[0].strike)
+    : null;
+  const table = (label, rows) => `<div><h3>${label}</h3><table class="opt-table"><thead><tr>
       <th>Strike</th><th>Last</th><th>Bid</th><th>Ask</th><th>Vol</th><th>OI</th></tr></thead><tbody>${
-    rows.map(r => `<tr><td>${fmt(r.strike)}</td><td>${fmt(r.lastPrice)}</td><td>${fmt(r.bid)}</td><td>${fmt(r.ask)}</td><td>${fmt(r.volume)}</td><td>${fmt(r.openInterest)}</td></tr>`).join('')
-  }</tbody></table>`;
-  body.innerHTML =
-    `<select id="expiry-select">${data.expiries.map(e => `<option value="${e}" ${e === data.expiry ? 'selected' : ''}>${e}</option>`).join('')}</select>` +
-    table('Calls', data.calls) + table('Puts', data.puts);
-  document.getElementById('expiry-select').addEventListener('change', (e) => openOptions(e.target.value));
+    rows.map(r => `<tr class="${r.strike === atm ? 'atm' : ''}"><td>${fmt(r.strike, 2)}</td><td>${fmt(r.lastPrice, 2)}</td><td>${fmt(r.bid, 2)}</td><td>${fmt(r.ask, 2)}</td><td>${fmt(r.volume)}</td><td>${fmt(r.openInterest)}</td></tr>`).join('')
+  }</tbody></table></div>`;
+  body.innerHTML = `<div class="opt-grid">${table('Calls', data.calls)}${table('Puts', data.puts)}</div>`;
 }
 
-document.getElementById('interval').addEventListener('change', loadCandles);
-document.getElementById('style').addEventListener('change', (e) => applyStyle(e.target.value));
-document.getElementById('refresh').addEventListener('click', loadCandles);
-document.getElementById('sma20').addEventListener('change', renderIndicators);
-document.getElementById('sma50').addEventListener('change', renderIndicators);
-document.getElementById('vol').addEventListener('change', renderIndicators);
-
-document.querySelectorAll('#range-bar button[data-range]').forEach(btn => {
+// ---------- controls ----------
+document.querySelectorAll('#interval-seg button').forEach(btn => {
+  btn.addEventListener('click', () => { setIntervalUI(btn.dataset.interval); loadCandles({ interval: btn.dataset.interval }); });
+});
+$('style').addEventListener('change', (e) => { applyStyle(e.target.value); savePrefs(); });
+$('refresh').addEventListener('click', () => loadCandles());
+for (const id of ['sma20', 'sma50', 'vol']) {
+  $(id).addEventListener('change', () => { renderIndicators(); savePrefs(); });
+}
+document.querySelectorAll('#range-bar button').forEach(btn => {
   // Always request the finest interval as a baseline — the backend escalates to a
   // coarser one only if that range genuinely can't be served at 1m. Without this, a
   // range button reuses whatever interval a PREVIOUS wider range had auto-selected
@@ -591,7 +1330,26 @@ document.querySelectorAll('#range-bar button[data-range]').forEach(btn => {
   btn.addEventListener('click', () => loadCandles({ range: btn.dataset.range, interval: '1m' }));
 });
 
+// ---------- boot ----------
+(function restorePrefs() {
+  const p = loadPrefs();
+  if (p.symbol) { currentSymbol = String(p.symbol).toUpperCase(); }
+  symbolInput.value = currentSymbol;
+  if (p.style && priceSeriesByStyle[p.style]) { $('style').value = p.style; applyStyle(p.style); }
+  if (typeof p.sma20 === 'boolean') $('sma20').checked = p.sma20;
+  if (typeof p.sma50 === 'boolean') $('sma50').checked = p.sma50;
+  if (typeof p.vol === 'boolean') $('vol').checked = p.vol;
+})();
+
+try {
+  if (localStorage.getItem('orazio.cas.collapsed') === 'true') {
+    $('cas').classList.add('collapsed');
+    $('cas-toggle').setAttribute('aria-expanded', 'false');
+  }
+} catch (e) { /* private mode */ }
+
 loadConfig();
+loadCas();
 loadCandles();
 pollQuote();
 setInterval(() => { if (quotesInFlight === 0) pollQuote(); }, 2000);

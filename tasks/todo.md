@@ -238,3 +238,100 @@ like a real user. Findings and fixes:
   (e.g. ALL range with decades of volume history), the main price axis bleeds into
   negative-looking tick labels to accommodate the volume pane's reserved bottom
   margin. Cosmetic only, flagged for a future pass.
+
+---
+
+## Increment 6
+
+- [x] Task: Backend live-quote layer (Yahoo v8 + BSE), drop NSE allIndices
+  - Acceptance: /api/quote NIFTY returns marketTime <=15s old; SENSEX source=bse and <=60s old
+  - Verify: curl x5 over 30s; compare to direct v8/BSE calls
+  - Files: app.py
+- [x] Task: Futures metadata (names, alias) in /api/config
+  - Acceptance: config lists ES=F -> "S&P 500 Futures (ES)", alias SPX
+  - Files: app.py
+- [x] Task: Frontend live-bar rule keyed to quote freshness (fixes SENSEX 15-min hole)
+  - Files: static/index.html
+- [x] Task: Freshness badge + friendly futures names + rail highlight on futures
+  - Files: static/index.html
+- [x] Task: Docs (README data-source table) and spec sync
+  - Files: README.md, tasks/*
+
+Results (verified live, market open): NIFTY/BANKNIFTY/NIFTYIT/stocks ticks 1-5s old at 30-120ms per call
+(was ~2s per call and up to 2 min stale via NSE); SENSEX from BSE at ~65s (was ~900s); status badge shows
+"Live - 6s" / "Delayed 10m" / "Closed"; futures show "S&P 500 Futures (ES)" and the rail keeps SPX active.
+Open: SENSEX has a ~15 min hole between Yahoo's last bar and the first live BSE bar (shown, not faked).
+
+---
+
+## Increment 7
+
+- [x] Task: Rebuild SENSEX intraday bars from BSE (Yahoo delays the bars, not just the price)
+  - Acceptance: newest SENSEX candle <=2 min old, candles not flat
+  - Verify: newest bar age 64s then 74s in-browser (was 989s); 12:59 and 13:00 bars carry real OHLC
+  - Files: app.py (live-bar poller + splice in /api/candles)
+- [x] Task: /api/cas endpoint (pre-open + closing session, NSE + BSE)
+  - Verify: curl returns phase `waiting:post-close`, 9904s remaining, open/change for the 4 Indian
+    indices, explicit unavailable for the other 7
+  - Files: app.py
+- [x] Task: Call Auction panel under the index rail
+  - Verify: in-browser — phase "Post-close in 2h 43m", 4 index rows, unavailable note, collapse
+    persists; no console errors
+  - Files: static/index.html, static/styles.css
+- [x] Task: Raise the live-badge threshold to 150s for minute-stamped feeds
+  - Files: static/index.html
+- [x] Task: Docs (README SENSEX + CAS sections, API table, spec, todo)
+  - Files: README.md, tasks/*
+
+Not verified: the CAS panel during an actual auction window (next pre-open 09:00 IST). Built and
+tested against this morning's frozen pre-open snapshot and the live allIndices fields.
+
+- [x] Task: Live CAS feed window (per-stock auction data + order book)
+  - Acceptance: opens from the CAS panel; shows IEP/change/ATO/buy/sell per stock, sortable and
+    filterable; row click reveals the 10-rung auction order book; refreshes every 3s; states
+    live-vs-snapshot with a timestamp
+  - Verify: in-browser - 210 F&O rows, breadth 93/97/20, sort by symbol -> 360ONE, filter
+    "RELIANCE" -> 1 row, order book renders 10 rungs with the IEP rung marked; ladder stayed at
+    10 rungs across 8 samples over 7s (an earlier version blanked it on every poll); no console errors
+  - Files: app.py (/api/cas/feed), static/index.html, static/styles.css
+
+- [x] Task: Correct CAS timings against primary documentation
+  - Was: pre-open 09:00-09:15 + "post-close" 15:40-16:00 (wrong, from memory)
+  - Now: pre-open 09:00-09:15, closing auction 15:15-15:35, post-market 15:50-16:00, each with
+    per-stage labels; phase read from NSE marketStatus with the clock only for countdowns
+  - Verify: cas_phase() walked across 14 times of day + a Saturday - every phase, stage and
+    countdown correct; all five UI states render; no console errors
+  - Files: app.py, static/index.html, static/styles.css, README.md
+
+- [x] Task: Point the live feed at NSE's real closing-auction endpoint (casApi/getCASData)
+  - Verify: endpoint answers with 210 eligible symbols; feed routes to CAS during the closing
+    auction and to pre-open otherwise; renders CAS columns, the reference-price-stage empty state,
+    and an order book with NSE's flag shown verbatim; no console errors
+  - NOT verified against real rows (empty outside 15:15-15:35) - see spec 7d
+  - Files: app.py, static/index.html, static/styles.css, README.md
+
+## Increment 8
+
+- [x] Task: BSE push-stream client (bse_stream.py) with verified TLS
+  - Verify: connected, 3-4 ticks in 14s with stamps ~3s behind wall clock; TLS verified via AIA intermediate
+- [x] Task: SENSEX quote + candles from the stream (REST as fallback)
+  - Verify: quote age 2-3s (was 65-88s); bars have real ranges 10.40 / 17.66 / 8.52
+- [x] Task: /api/cas/movement + separate "Live CAS movement" window for all 11 indices
+  - Verify: 11 cards, 4 live with sparklines (SENSEX 95 points in ~10s), 7 honestly unavailable, no console errors
+- [x] Task: verify real CAS rows against the recorder capture (done at 15:21; mapping corrected, see spec 8c)
+- [x] Task: add websockets / certifi / cryptography to requirements.txt
+
+- [x] Task: Redesign Live CAS as a 2x2 quadrant window, Indian indices only, measured against the 15:14:59 reference
+  - Verify: 4 quadrants, each with a live chart; reference locked at 15:15:00 with real values; dotted REF
+    line, green/red about it, header delta in pts and %; other markets removed; no console errors
+  - Files: app.py, static/index.html, static/styles.css, README.md
+
+- [x] Task: Correct the CAS row mapping against real data (IEP, imbalances, bands, equilibrium-rung flag)
+- [x] Task: Persist reference + chart history so a server restart cannot wipe them mid-auction
+
+## Increment 9
+- [x] Task: use NSE's official close when Yahoo's NSE-index tick is stale (fixes NIFTY showing 23429.00 vs the official 23414.30)
+  - Verify: all four indices match the official closes; RELIANCE.NS / SPX / KOSPI unchanged
+  - Files: app.py, static/index.html
+- [x] Task: README - per-index data-source map, source priority, what is not real-time
+- [ ] Known gap: NSE-index candle chart ends at 15:14 (no Yahoo bars for the auction)

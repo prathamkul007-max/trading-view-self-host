@@ -85,3 +85,19 @@ Sequential (each depends on the previous landing and working):
 - After (6): toggle on SPX loads ES=F and back; toggle absent entirely on NIFTY page.
 - After (7): open options panel on AAPL (real data) and NIFTY (unavailable state) —
   both must render without console errors.
+
+---
+
+# Plan: Increment 6 (real-time quotes, SENSEX, futures naming)
+
+Order (each step verified before the next):
+1. Backend quote layer: `yahoo_live_quote()` (v8 meta, 1 KB), `bse_live_quote()` (SENSEX), remove NSE code,
+   `/api/quote` returns `marketTime` + `source` + `delaySec`. Fallback chain v8 -> yfinance.
+2. Backend metadata: futures display names + alias map exposed via `/api/config`.
+3. Frontend live-bar rule uses the quote's own freshness (not the newest Yahoo bar's age), so delayed
+   history (SENSEX, 15 min hole) no longer disables live candles.
+4. Frontend freshness badge + friendly futures names + rail highlight for futures.
+5. Verify with curl + devtools (NIFTY tick cadence, SENSEX age, futures labels), update README/spec/todo.
+
+Risks: BSE/Yahoo endpoints are unofficial (mitigate: fallbacks, short timeouts, cached session for BSE);
+a 15-minute hole between SENSEX's last Yahoo bar and the first live bar is shown as a time gap, not faked.
