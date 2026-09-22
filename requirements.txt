@@ -5,3 +5,4 @@ requests
 websockets
 certifi
 cryptography
+pytest

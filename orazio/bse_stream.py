@@ -22,7 +22,7 @@ import tempfile
 import threading
 import time
 from collections import deque
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 import certifi
 import requests
@@ -31,10 +31,11 @@ from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 from cryptography.x509.oid import AuthorityInformationAccessOID, ExtensionOID
 
+from .constants import IST
+
 HOST = "bnotification.bseindia.com"
 URI = f"wss://{HOST}/socket.io/?EIO=4&transport=websocket"
 CHANNELS = ("SenSexValue", "SensexIndicativePrice")
-IST = timezone(timedelta(hours=5, minutes=30))
 CHAIN_FILE = os.path.join(tempfile.gettempdir(), "orazio_bse_chain.pem")
 
 

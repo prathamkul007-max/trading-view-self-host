@@ -42,17 +42,28 @@ Notes: `NQ=F` is Nasdaq-100, not the Composite. Candle history comes from Yahoo 
 
 ```mermaid
 flowchart LR
-    B["Browser<br/>static/index.html"] -- "/api/*" --> F["Flask<br/>app.py"]
-    F --> Y["Yahoo Finance"]
-    F --> N["NSE feeds"]
-    F --> S["bse_stream.py"] --> BSE["BSE push stream"]
+    B["Browser<br/>static/index.html"] -- "/api/*" --> R["orazio/routes.py"]
+    R --> M["orazio/market_data.py"] --> Y["Yahoo Finance"]
+    R --> C["orazio/cas.py"] --> N["NSE feeds"]
+    M --> S["orazio/bse_stream.py"] --> BSE["BSE push stream"]
 ```
 
 | Path | Purpose |
 |---|---|
-| `app.py` | API routes, source selection and fallbacks, CAS logic |
-| `bse_stream.py` | BSE Socket.IO client, TLS verified against the missing intermediate certificate |
+| `app.py` | Thin entry point — creates the app and runs the dev server |
+| `orazio/__init__.py` | App factory: wires the Flask app, CORS, and blueprint together |
+| `orazio/config.py` | Environment-driven settings (debug, host, port) |
+| `orazio/constants.py` | Static lookup tables (symbol aliases, ranges, CAS session windows, …) |
+| `orazio/symbols.py` | Symbol validation and interval/range resolution |
+| `orazio/candles.py` | Shapes yfinance OHLCV data into API rows |
+| `orazio/market_data.py` | Live quote sources (Yahoo/BSE/yfinance/NSE) and the live-bar aggregator built on them |
+| `orazio/cas.py` | Call Auction Session: phase/session logic, NSE index polling, reference-price calc, feed normalization |
+| `orazio/nse_client.py` | Shared cookie-authenticated NSE JSON fetcher |
+| `orazio/bse_stream.py` | BSE Socket.IO client, TLS verified against the missing intermediate certificate |
+| `orazio/poller.py` | Starts every background thread exactly once |
+| `orazio/routes.py` | HTTP routes — thin glue over the modules above |
 | `static/` | Frontend (`index.html`) and design tokens (`styles.css`) |
+| `tests/` | Unit tests for the pure logic (symbol validation, range resolution, CAS phase calc, …) |
 | `tasks/` | Spec, plan and todo history |
 
 ## Limits
