@@ -1,14 +1,16 @@
 # Orazio
 
-A self-hosted, TradingView-style chart for Indian and global indices. Flask backend, Lightweight-Charts frontend. No build step, no database, no API keys.
+A self-hosted, TradingView-style charting terminal for Indian and global indices — Flask backend, Lightweight-Charts frontend.
+
+**No login. No account. No cloud service in between.** You run it on your own machine; your browser talks straight to your local server, which talks straight to the exchanges' own public endpoints. Nobody else sees what you're watching. No build step, no database, no API keys, no subscription — every data source used is free and public.
 
 ## Features
 
-- **Live candles.** Quotes every 2 s; the newest candle opens locally, so the chart keeps up with the market.
-- **Data-age badge.** `Live · 3s`, amber `Delayed 10m` for provider-delayed feeds, grey `Closed`.
+- **Live candles.** Quotes every 2 s; the newest candle opens locally, so the chart keeps up with the market between refreshes.
+- **Data-age badge.** `Live · 3s`, amber `Delayed 10m` for provider-delayed feeds, grey `Closed` — always honest about how stale a number is.
 - **Real-time SENSEX** from BSE's own push stream (Yahoo delays it ~15 min).
-- **Call auction (CAS).** A panel with a countdown, a stock-by-stock auction feed with order books, and a full-screen **Live CAS** window: NIFTY, BANK NIFTY, NIFTY IT and SENSEX in four quadrants, each measured against the last value at 15:14:59.
-- **Charting.** 11-index rail, candles/bars/line/area, 1m–1D bars, 1D–All ranges, drag left for older days, SMA and volume, symbol search.
+- **CAS terminal.** A dedicated Call Auction Session workspace: a left-rail countdown panel, a full-screen **Live CAS movement** view (NIFTY, BANK NIFTY, NIFTY IT and SENSEX in four quadrants, each measured against the last value at 15:14:59), and a stock-by-stock **live auction feed** with sortable columns and per-symbol order books — for both the 09:00 pre-open and the 15:15 closing auction.
+- **Charting.** 11-index rail, candles/bars/line/area, 1m–1D bars, 1D–All ranges, drag left to lazy-load older days, SMA 20/50 and volume overlays, instant symbol search.
 - **Derivatives.** Cash/futures toggle for SPX, Nasdaq and Dow; options chains for US stocks.
 
 ## Quick start
@@ -40,13 +42,17 @@ Notes: `NQ=F` is Nasdaq-100, not the Composite. Candle history comes from Yahoo 
 
 ## How it fits together
 
+Everything runs as one local process: the Flask server serves the page, answers `/api/*`, and polls the exchanges in background threads. Nothing is written anywhere but your own disk (a small seed file, so the CAS reference price survives a restart).
+
 ```mermaid
 flowchart LR
-    B["Browser<br/>static/index.html"] -- "/api/*" --> R["orazio/routes.py"]
+    UI["Browser<br/>static/js/* (ES modules)"] -- "fetch /api/*" --> R["orazio/routes.py"]
     R --> M["orazio/market_data.py"] --> Y["Yahoo Finance"]
     R --> C["orazio/cas.py"] --> N["NSE feeds"]
     M --> S["orazio/bse_stream.py"] --> BSE["BSE push stream"]
 ```
+
+**Backend** (`orazio/`) — one module per concern:
 
 | Path | Purpose |
 |---|---|
@@ -62,7 +68,23 @@ flowchart LR
 | `orazio/bse_stream.py` | BSE Socket.IO client, TLS verified against the missing intermediate certificate |
 | `orazio/poller.py` | Starts every background thread exactly once |
 | `orazio/routes.py` | HTTP routes — thin glue over the modules above |
-| `static/` | Frontend (`index.html`) and design tokens (`styles.css`) |
+
+**Frontend** (`static/js/`) — no build step, plain ES modules loaded by the browser:
+
+| Module | Purpose |
+|---|---|
+| `state.js` | Shared app state, formatters, design tokens |
+| `chart.js` | Lightweight-Charts setup, series, indicators, legend |
+| `data.js` | Candle loading, history lazy-load, live quote polling |
+| `symbol.js`, `rail.js`, `futures.js`, `options.js` | Symbol search, the index rail, the cash/futures toggle, the options modal |
+| `cas-panel.js`, `cas-movement.js`, `cas-feed.js` | The CAS terminal: countdown panel, live movement modal, stock-by-stock feed |
+| `ui.js`, `prefs.js`, `main.js` | Generic UI helpers, saved preferences, boot + control wiring |
+
+Other paths:
+
+| Path | Purpose |
+|---|---|
+| `static/index.html`, `static/styles.css` | Markup and design tokens |
 | `tests/` | Unit tests for the pure logic (symbol validation, range resolution, CAS phase calc, …) |
 | `tasks/` | Spec, plan and todo history |
 
