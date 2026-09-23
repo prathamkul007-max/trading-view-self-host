@@ -11,6 +11,12 @@ const INDEX_META = {
   KOSPI: ['KOSPI', 'Asia'], TAIEX: ['Taiwan Weighted', 'Asia'], CHINA: ['CSI 300', 'Asia'], SSE: ['Shanghai Composite', 'Asia'],
 };
 const RAIL_GROUPS = ['India', 'US', 'Asia', 'Other'];
+// NIFTY/BANKNIFTY/NIFTYIT: free from NSE's own allIndices payload (orazio/cas.py
+// breadth_from_all_indices). SENSEX/DOWJONES/SPX/CHINA: computed from their own
+// constituents (orazio/constituents.py) since nobody publishes it for them. NASDAQ,
+// KOSPI, TAIEX and SSE have no accurate free constituent list to compute it from, so
+// they simply get no breadth line rather than a guessed one.
+const BREADTH_ALIASES = new Set(['NIFTY', 'BANKNIFTY', 'NIFTYIT', 'SENSEX', 'DOWJONES', 'SPX', 'CHINA']);
 
 export function highlightRail() {
   // While on ES=F the rail should still show SPX as the active index.
@@ -33,7 +39,9 @@ export async function loadConfig() {
   for (const sym of state.CONFIG.quickIndices) byGroup[(INDEX_META[sym] || [null, 'Other'])[1]].push(sym);
   $('rail-groups').innerHTML = RAIL_GROUPS.filter(g => byGroup[g].length).map(g =>
     `<div class="rail-group"><div class="rail-title">${g}</div>${byGroup[g].map(sym =>
-      `<button type="button" class="rail-item" data-sym="${esc(sym)}"><span class="rail-sym">${esc(sym)}</span><span class="rail-name">${esc((INDEX_META[sym] || [sym])[0])}</span></button>`
+      `<button type="button" class="rail-item" data-sym="${esc(sym)}"><span class="rail-sym">${esc(sym)}</span><span class="rail-name">${esc((INDEX_META[sym] || [sym])[0])}</span>${
+        BREADTH_ALIASES.has(sym) ? `<span class="rail-breadth" data-breadth-for="${esc(sym)}"></span>` : ''
+      }</button>`
     ).join('')}</div>`).join('');
   $('rail-groups').addEventListener('click', (e) => {
     const btn = e.target.closest('.rail-item');
@@ -42,4 +50,19 @@ export async function loadConfig() {
     switchSymbol(btn.dataset.sym);
   });
   highlightRail();
+  loadBreadth();
+}
+
+// Live advances/declines for the indices NSE publishes it for (see BREADTH_ALIASES).
+export async function loadBreadth() {
+  try {
+    const res = await fetch('/api/breadth');
+    if (!res.ok) throw new Error();
+    const d = await res.json();
+    for (const row of d.indices) {
+      const el = document.querySelector(`.rail-breadth[data-breadth-for="${row.alias}"]`);
+      if (!el) continue;
+      el.innerHTML = `<span class="up">▲${row.advances}</span> <span class="down">▼${row.declines}</span>`;
+    }
+  } catch (e) { /* breadth is a nicety on top of the rail; failing quietly is fine */ }
 }

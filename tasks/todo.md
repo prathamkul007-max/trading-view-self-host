@@ -335,3 +335,79 @@ tested against this morning's frozen pre-open snapshot and the live allIndices f
   - Files: app.py, static/index.html
 - [x] Task: README - per-index data-source map, source priority, what is not real-time
 - [ ] Known gap: NSE-index candle chart ends at 15:14 (no Yahoo bars for the auction)
+
+---
+
+## Increment 10 (spec: tasks/spec.md § Increment 10; plan: tasks/plan.md § Increment 10)
+
+- [x] Task: Full OHLC legend words
+  - Acceptance: legend shows "Open"/"High"/"Low"/"Close" in Candle/Bar mode, "Close" alone in
+    Line/Area mode, for both the default (last-bar) and hover (crosshair-bar) states
+  - Verify: hover the chart in each of the 4 chart styles, screenshot, confirm full words
+  - Files: static/js/chart.js
+
+- [x] Task: Hover-color fix — Line/Area series, axis tag, and legend Close value follow up/down
+  - Acceptance: `lineSeries`/`areaSeries` color and the legend's Close value switch between
+    `--up`/`--down` based on current price vs. session previous close (not a fixed blue); Candle/Bar
+    styles unchanged
+  - Verify: force a down day (or a currently-down symbol) and an up day in Line style — confirm red
+    vs. green on the line, its axis tag, and the legend value, matching the price chip's own color
+  - Files: static/js/chart.js, static/js/data.js
+
+- [x] Task: 200 SMA
+  - Acceptance: a new "SMA 200" checkbox draws a 4th distinct-colored line using the existing
+    period-agnostic `sma()` helper; empty until 200 bars are loaded, same as SMA 20/50
+  - Verify: enable on a range with 200+ bars, confirm the line draws; enable on a short range,
+    confirm it silently draws nothing (no error)
+  - Files: static/js/chart.js, static/index.html, static/js/prefs.js
+
+- [x] Task: `GET /api/breadth` — live advances/declines for NIFTY/BANKNIFTY/NIFTYIT
+  - Acceptance: returns `{indices: [{alias, advances, declines, unchanged}, ...]}` for exactly the
+    3 NSE-covered indices, sourced from the already-cached `allIndices` call (no new NSE traffic);
+    never 500s
+  - Verify: curl `/api/breadth`, confirm 3 rows with live-looking advances/declines
+  - Files: orazio/cas.py (or new orazio/breadth.py), orazio/routes.py, tests/test_breadth.py
+
+- [x] Task: Rail breadth counts (frontend)
+  - Acceptance: NIFTY/BANKNIFTY/NIFTYIT rail rows show a small "▲35 ▼15" line that updates every 5s
+    without a page reload; every other rail row shows nothing extra
+  - Verify: in-browser, watch counts change across a couple of poll cycles; confirm no line appears
+    under SENSEX/SPX/etc.
+  - Files: static/js/rail.js, static/styles.css
+
+- [x] Task: `GET /api/movers` — top gainers/losers by universe
+  - Acceptance: `?universe=allSec|NIFTY|BANKNIFTY` returns `{gainers: [...], losers: [...], universe,
+    asOf}`, each row `{symbol, ltp, perChange, open, high, low, volume}`; never 500s
+  - Verify: curl all 3 universes, confirm sorted, non-empty lists during market hours
+  - Files: orazio/cas.py (or new orazio/movers.py), orazio/routes.py, tests/test_movers.py
+
+- [x] Task: Top Gainers/Losers modal (frontend)
+  - Acceptance: new toolbar button opens a modal defaulting to whole-market movers; a segmented
+    Market/NIFTY/BankNifty toggle re-fetches; two tables (Gainers, Losers) sorted by % change;
+    polls every 10s while open, stops on close
+  - Verify: in-browser, open modal, confirm both tables populated, switch universe, confirm data
+    changes, close and confirm polling stops (no lingering network calls)
+  - Files: static/js/movers.js (new), static/index.html, static/styles.css, static/js/main.js
+
+- [x] Task: Two-point measure tool
+  - Acceptance: a "Measure" toolbar toggle; click-click on the chart draws a line + label with
+    Δ price and Δ % between the two points; a third click starts fresh; Escape or toggling off
+    clears it; no interference with normal pan/zoom/crosshair when inactive
+  - Verify: in-browser, measure across a few different bar spans in both directions (price up and
+    down), confirm the Δ% matches a hand calculation; confirm clean teardown on Escape and re-toggle
+  - Files: static/js/measure.js (new), static/index.html, static/styles.css, static/js/main.js
+
+- [x] Task: Light mode
+  - Acceptance: a theme toggle button flips the whole app (rail, toolbar, all modals, chart colors)
+    between the existing dark theme and a new light theme; defaults to dark; choice persists across
+    reload
+  - Verify: in-browser, toggle on, confirm every surface recolors including an already-open chart's
+    series/legend/axes; open each modal once under light mode to confirm it recolors too; reload,
+    confirm the choice persisted; toggle back to dark, confirm no regression in items above
+  - Files: static/styles.css, static/js/state.js, static/js/chart.js, static/js/main.js,
+    static/js/prefs.js
+
+- [x] Task: Docs sync
+  - Acceptance: README features list mentions the measure tool, breadth counts, top movers, SMA 200,
+    and light mode
+  - Files: README.md, tasks/*

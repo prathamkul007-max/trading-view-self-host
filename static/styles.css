@@ -21,12 +21,31 @@
   --down: #ef5350;
   --down-soft: rgba(239, 83, 80, 0.14);
   --warn: #f5a524;
+  --crosshair: #ffffff;  /* bright on purpose — the guide line must be easy to track, not blend in */
 
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px;
   --r1: 4px; --r2: 6px; --r3: 10px;
 
   --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+}
+
+/* Light theme: only surface/text tokens change. Accent/up/down/warn are semantic
+   (buy/sell, brand) and stay identical in both themes. */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-0: #f5f6f8;
+  --bg-1: #ffffff;
+  --bg-2: #eef0f4;
+  --bg-3: #e3e6ec;
+  --line: #e3e6ec;
+  --line-strong: #cdd3dd;
+
+  --text: #1a2130;
+  --text-dim: #545e6e;
+  --text-faint: #7c8698;
+  --crosshair: #10131a;  /* white would vanish on a white chart — go near-black here instead */
 }
 
 * { box-sizing: border-box; }
@@ -70,6 +89,8 @@ button { cursor: pointer; }
 .rail-sym { font-weight: 600; font-size: 12.5px; }
 .rail-name { font-size: 11px; color: var(--text-faint); }
 .rail-item[aria-current="true"] .rail-sym { color: var(--accent); }
+.rail-breadth { margin-top: 2px; font: 10.5px var(--mono); }
+.rail-breadth .up { margin-right: 6px; }
 
 /* ---------- toolbar ---------- */
 .toolbar {
@@ -143,6 +164,21 @@ button { cursor: pointer; }
 #chart { position: absolute; inset: 0; }
 #day-lines { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
 .day-line { position: absolute; top: 0; bottom: var(--axis-h, 26px); width: 0; border-left: 1px dotted rgba(152, 162, 179, .45); }
+
+/* ---------- measure tool ---------- */
+#measure-btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+#measure-overlay { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+.measure-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.measure-line-el { stroke: var(--text); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.measure-dot, .measure-svg { pointer-events: none; }
+.measure-dot { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg-1); }
+.measure-label {
+  position: absolute; transform: translate(-50%, -100%); white-space: nowrap;
+  padding: 3px 8px; border-radius: var(--r1); background: var(--bg-3); border: 1px solid var(--line-strong);
+  font: 11px var(--mono); font-variant-numeric: tabular-nums;
+}
+.measure-label.up { color: var(--up); }
+.measure-label.down { color: var(--down); }
 
 .legend { position: absolute; top: var(--s3); left: var(--s3); z-index: 5; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px var(--s3); max-width: calc(100% - 120px); pointer-events: none; font-size: 12px; }
 .legend .lg-sym { font-weight: 650; font-size: 13px; }

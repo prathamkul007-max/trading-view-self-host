@@ -101,3 +101,144 @@ Order (each step verified before the next):
 
 Risks: BSE/Yahoo endpoints are unofficial (mitigate: fallbacks, short timeouts, cached session for BSE);
 a 15-minute hole between SENSEX's last Yahoo bar and the first live bar is shown as a time gap, not faked.
+
+---
+
+# Plan: Increment 10 (hover color, measure tool, full OHLC, breadth, movers, SMA200, light mode)
+
+Source spec: `tasks/spec.md`, Increment 10. All four flagged design choices confirmed as proposed.
+
+## Components
+
+1. **Hover-color fix (Line/Area) + full OHLC legend words** (frontend only: `static/js/chart.js`,
+   `static/js/data.js`)
+   - `chart.js`: legend head/body text changes from `O`/`H`/`L`/`C` to `Open`/`High`/`Low`/`Close`
+     (candle/bar: all four; line/area: `Close` only). Pure string/template change in `updateLegend()`.
+   - Color: `lineSeries`/`areaSeries` currently take a fixed `color: COLORS.accent`. Add an
+     `applyLineAreaColor(isUp)` helper that calls `lineSeries.applyOptions({color, ...})` /
+     `areaSeries.applyOptions({lineColor, topColor, bottomColor})` with `COLORS.up`/`COLORS.down`
+     variants, and recolors the legend's Close `<span class="num">` with the `up`/`down` class.
+   - Driven by `pollQuote()` in `data.js`, which already has `q.change >= 0` — call the new helper
+     there (same place the price chip already gets its up/down class) so it's session-vs-prevClose,
+     matching assumption 1. No new endpoint.
+
+2. **Full OHLC + hover color are pure frontend, zero backend risk** — build and verify first, since
+   they're the smallest, most isolated pieces and immediately visible.
+
+3. **200 SMA** (frontend only: `static/js/chart.js`, `static/index.html`, `static/styles.css`)
+   - Add `sma200Series` next to `sma20Series`/`sma50Series` (new distinct color, e.g. `#4fd1c5`
+     cyan — doesn't collide with amber/purple/up/down/accent).
+   - `renderIndicators()`: extend with the `$('sma200').checked ? sma(latestCandles, 200) : []` branch
+     (the existing `sma()` helper is period-agnostic, no change needed there).
+   - `index.html`: one more `<label class="toggle">` checkbox next to SMA 20/50.
+   - `prefs.js`: persist `sma200` alongside `sma20`/`sma50`.
+
+4. **Market breadth** (backend: new `GET /api/breadth`; frontend: `static/js/rail.js`,
+   `static/styles.css`)
+   - Backend (`orazio/cas.py` or a new `orazio/breadth.py`): a `breadth_rows()` function that calls
+     the already-cached `nse_get("/api/allIndices")`, and for each of `NIFTY_INDEX_NAMES` maps
+     `{alias, advances, declines, unchanged}` — pure shaping function, unit-testable like
+     `normalise_cas_rows`. New route in `routes.py`: `GET /api/breadth` returning
+     `{indices: [...]}` for NIFTY/BANKNIFTY/NIFTYIT only (SENSEX and non-Indian indices simply
+     absent from the list — no placeholder rows, per assumption 5).
+   - Frontend (`rail.js`): after rendering rail buttons, a small poll (`setInterval`, 5s) hits
+     `/api/breadth` and injects a `▲35 ▼15` line under the matching `.rail-item` (new child span,
+     only for aliases present in the response).
+   - Depends on: nothing else in this increment; fully independent, can build in parallel with (3).
+
+5. **Top Gainers/Losers modal** (backend: new `GET /api/movers`; frontend: new `static/js/movers.js`,
+   modal markup in `index.html`, new toolbar button)
+   - Backend: a `movers(universe, direction)` function wrapping
+     `nse_get("/api/live-analysis-variations", {"index": direction})` (direction = `gainers`/
+     `loosers` — NSE's own spelling), then indexes into the response by `universe`
+     (`allSec`/`NIFTY`/`BANKNIFTY`), shapes each row to `{symbol, ltp, perChange, open, high, low,
+     volume}`. Route: `GET /api/movers?universe=allSec` returns
+     `{gainers: [...], losers: [...], universe, asOf}`. Same one call serves both tables (NSE
+     conveniently exposes `gainers`/`loosers` as sibling top-level calls; fetch both directions
+     server-side in one route handler so the frontend gets both lists in one round trip).
+   - Frontend (`movers.js`, follows the exact open/close/poll/render pattern already established by
+     `cas-feed.js`): a toolbar button opens the modal; a 3-way segmented toggle (Market/NIFTY/
+     BankNifty) switches `universe` and re-fetches; two tables (Gainers, Losers) sorted by
+     `perChange` descending/ascending; polls every 10s while open, stops on close (same
+     `clearInterval` pattern as every other modal here).
+   - Depends on: nothing else; independent of (4) despite both touching NSE, since they hit
+     different NSE endpoints.
+
+6. **Two-point measure tool** (frontend only, new `static/js/measure.js`, `static/styles.css`)
+   - New toolbar toggle button ("Measure", ruler icon) next to the existing chart-style select.
+   - On activate: chart click handler (`chart.subscribeClick`) captures point A (time+price via the
+     click param's `time` and the series' `coordinateToPrice`), draws nothing yet. Second click
+     captures point B, and a DOM overlay (positioned via `timeToCoordinate`/`priceToCoordinate`,
+     same technique as `renderDayLines`) draws a line between the two screen points plus a floating
+     label with Δ price, Δ % `((B-A)/A*100)`, and bar/time span. Third click starts a fresh A.
+     Escape or toggling the button off removes the overlay and unsubscribes the click handler.
+   - Depends on: nothing else; can build any time. Riskiest single piece (most new interaction
+     surface), so sequenced after the more mechanical items land and are verified.
+
+7. **Light mode** (frontend only: `static/styles.css`, `static/js/state.js`, `static/js/chart.js`,
+   `static/js/cas-movement.js`, `static/js/main.js`, `static/js/prefs.js`)
+   - `styles.css`: new `:root[data-theme="light"] { ... }` block redefining every `--bg-*`/`--line*`/
+     `--text*` token (accent/up/down/warn stay the same in both themes — they're semantic, not
+     surface colors) plus `color-scheme: light`.
+   - `state.js`: `COLORS` becomes a function `computeColors()` (re-reads `getComputedStyle` +
+     `token()`/`alpha()`) instead of a frozen object computed once; export a `refreshColors()` that
+     recomputes and mutates the existing `COLORS` object in place (keeps every existing `import {
+     COLORS }` reference valid without touching every consumer file).
+   - `chart.js`: a `applyThemeToChart()` that calls `chart.applyOptions()` (layout background/text/
+     grid/border) and `applyOptions()` on every series (candle/bar/line/area/volume/sma20/50/200)
+     with the refreshed `COLORS`.
+   - `cas-movement.js`: since its quad charts are only ever built when the modal opens
+     (`buildQuads()` already reads current `COLORS` fresh each call), no extra work needed there —
+     document this as a known limitation: switching theme while the Live CAS modal is already open
+     doesn't recolor it until it's closed and reopened.
+   - `main.js`: new theme-toggle button handler: flip `document.documentElement.dataset.theme`,
+     call `refreshColors()` + `applyThemeToChart()`, save via `prefs.js`.
+   - `prefs.js`: persist `theme: 'dark' | 'light'`; default `'dark'` when absent (assumption 9).
+   - Depends on: nothing else, but touches the most shared code (`COLORS`), so sequenced last —
+     land and verify every other visual feature against the stable dark theme first, so a light-mode
+     regression is never confused with a different increment's bug.
+
+## Build order
+
+Parallel-safe (independent, low risk, no shared state):
+- (1)/(2) hover-color fix + full OHLC legend words
+- (3) 200 SMA
+- (4) market breadth
+- (5) top movers
+
+Sequential, after the above land and are verified:
+1. (6) measure tool — new interaction surface, wants a stable chart to interact with first
+2. (7) light mode — touches `COLORS`, which by now several of the above (hover-color fix, SMA200 color)
+   will have added new call sites to; doing it last means recoloring logic only needs to be written once
+   against the final set of series/colors, not revisited after each earlier item lands
+
+## Risks & mitigations
+
+- **NSE endpoint fragility** (both new backend calls hit unofficial NSE JSON endpoints, same as every
+  existing NSE integration here): both new routes follow the established fallback pattern — return
+  `{available: false, ...}` / an empty list, never a 500, on any NSE failure. No new risk class, same
+  mitigation already proven in `cas.py`.
+- **`COLORS` becoming mutable** is the one structural change with blast radius: every module that does
+  `import { COLORS } from './state.js'` and reads a property at *call time* (not destructuring at
+  import time into a local const) is safe; a quick grep before landing (7) confirms which consumers
+  read `COLORS.x` live vs. cache it in a local — any caching call site needs updating to re-read.
+- **Measure tool click-handling collision**: `chart.subscribeClick` firing while normal crosshair/pan
+  is also active could double-fire. Mitigation: the click handler is only subscribed while Measure
+  mode is active (subscribe on toggle-on, unsubscribe on toggle-off/Escape), not always-on.
+- **SMA 200 on short ranges**: with <200 bars loaded (e.g. "1D" range on a symbol with a short
+  session) the line simply doesn't render — same as SMA20/50 today, not a new failure mode.
+
+## Verification checkpoints
+
+- After (1)+(2)+(3): switch to Line style on an up day and a down day (or force via search to a
+  currently-down symbol) — line/tag/legend all read green or red, never blue; legend shows full
+  words in every chart style; SMA 200 checkbox draws once a wide-enough range is loaded.
+- After (4): NIFTY/BANKNIFTY/NIFTYIT rail rows show live counts that change on their own within a
+  few polls; SENSEX and every non-Indian row show nothing extra.
+- After (5): open Top Movers, confirm two sorted tables render for the market default, and switching
+  to NIFTY/BankNifty changes the data.
+- After (6): measure between two visibly different bars, confirm the Δ% matches a hand calculation;
+  confirm Escape and re-toggling both clear it cleanly with no leftover DOM.
+- After (7): toggle light mode, confirm rail/toolbar/modals/chart all recolor together (open each
+  modal once to confirm), reload the page and confirm the choice persisted, toggle back to dark and
+  confirm nothing regressed from (1)-(6).

@@ -7,7 +7,7 @@ import requests
 import yfinance as yf
 from flask import Blueprint, abort, current_app, jsonify, request
 
-from . import cas, market_data
+from . import cas, constituents as constituents_service, market_data, movers as movers_service
 from .candles import df_to_rows
 from .constants import (FUTURES_MAP, FUTURES_META, HISTORY_PERIOD, INTERVAL_SECONDS,
                          NSE_INDEX_BY_YAHOO, NSE_INDEX_NAMES, QUICK_INDICES, RANGE_TO_PERIOD,
@@ -124,6 +124,12 @@ def quote():
     })
 
 
+@bp.route("/api/breadth")
+def breadth():
+    ensure_poller()
+    return jsonify({"indices": cas.breadth_rows() + constituents_service.breadth_rows()})
+
+
 @bp.route("/api/cas")
 def cas_route():
     ensure_poller()
@@ -135,7 +141,7 @@ def cas_route():
     if nse_phase and nse_phase != clock_phase:
         seconds = None
 
-    all_idx = nse_get("/api/allIndices") or {}
+    all_idx = cas.all_indices() or {}
     by_name = {row.get("index"): row for row in all_idx.get("data", [])}
 
     rows = []
@@ -327,6 +333,12 @@ def cas_feed():
         },
         "rows": rows,
     })
+
+
+@bp.route("/api/movers")
+def movers_route():
+    universe = request.args.get("universe") or "allSec"
+    return jsonify(movers_service.movers(universe))
 
 
 @bp.route("/api/search")

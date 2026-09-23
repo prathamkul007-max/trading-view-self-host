@@ -83,6 +83,7 @@ export function switchSymbol(symbol) {
   state.currentSymbol = symbol.toUpperCase();
   state.lastPolledPrice = null;
   state.tickChangedAt = 0;
+  state.lineAreaUp = null;
   savePrefs();
   loadCandles();
   pollQuote();

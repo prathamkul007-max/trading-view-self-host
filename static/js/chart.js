@@ -6,8 +6,8 @@ export const chart = LightweightCharts.createChart(document.getElementById('char
   grid: { vertLines: { color: COLORS.grid }, horzLines: { color: COLORS.grid } },
   crosshair: {
     mode: LightweightCharts.CrosshairMode.Normal,
-    vertLine: { color: COLORS.border, labelBackgroundColor: token('--bg-3') },
-    horzLine: { color: COLORS.border, labelBackgroundColor: token('--bg-3') },
+    vertLine: { color: COLORS.crosshair, labelBackgroundColor: token('--bg-3') },
+    horzLine: { color: COLORS.crosshair, labelBackgroundColor: token('--bg-3') },
   },
   rightPriceScale: { autoScale: true, borderColor: COLORS.border, scaleMargins: { top: 0.08, bottom: 0.35 } },
   handleScroll: { mouseWheel: true },
@@ -48,6 +48,9 @@ export const volumeSeries = chart.addHistogramSeries({
 });
 export const sma20Series = chart.addLineSeries({ color: '#f0b90b', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
 export const sma50Series = chart.addLineSeries({ color: '#7e57c2', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+// Blue is otherwise unused now that the Line/Area price series itself is colored by
+// up/down direction (see applyLineAreaColor below) rather than a fixed accent color.
+export const sma200Series = chart.addLineSeries({ color: '#4c8dff', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
 
 export const priceSeriesByStyle = { candle: candleSeries, bar: barSeries, line: lineSeries, area: areaSeries };
 
@@ -121,10 +124,24 @@ function sma(data, period) {
 export function renderIndicators() {
   sma20Series.setData($('sma20').checked ? sma(state.latestCandles, 20) : []);
   sma50Series.setData($('sma50').checked ? sma(state.latestCandles, 50) : []);
+  sma200Series.setData($('sma200').checked ? sma(state.latestCandles, 200) : []);
   volumeSeries.setData($('vol').checked ? state.latestCandles.map(c => ({
     time: c.time, value: c.volume,
     color: c.close >= c.open ? COLORS.volUp : COLORS.volDown,
   })) : []);
+}
+
+// Line/Area styles have no per-bar up/down of their own (unlike Candle/Bar), so they're
+// colored by the session's own direction — current price vs. previous close — the same
+// comparison the price chip already uses. Called from pollQuote() on every live tick, and
+// from applyThemeToChart() to reapply the same direction against a new theme's palette.
+export function applyLineAreaColor(isUp) {
+  const changed = state.lineAreaUp !== isUp;
+  state.lineAreaUp = isUp;
+  const color = isUp ? COLORS.up : COLORS.down;
+  lineSeries.applyOptions({ color });
+  areaSeries.applyOptions({ lineColor: color, topColor: alpha(color, 0.35), bottomColor: alpha(color, 0) });
+  if (changed && (state.currentStyle === 'line' || state.currentStyle === 'area')) updateLegend(null);
 }
 
 export function updateWatermark() {
@@ -139,17 +156,42 @@ export function updateLegend(bar) {
   const head = `<span class="lg-sym">${esc(displayName(state.currentSymbol))}</span><span class="lg-tag">${INTERVAL_LABEL[state.currentInterval] || esc(state.currentInterval)}</span>`;
   const f = (v) => v.toFixed(2);
   if (b.open === undefined || state.currentStyle === 'line' || state.currentStyle === 'area') {
-    legendEl.innerHTML = `${head}<span><span class="lg-k">C</span><span class="num">${f(b.close ?? b.value)}</span></span>`;
+    const lineCls = state.lineAreaUp === false ? 'down' : state.lineAreaUp === true ? 'up' : '';
+    legendEl.innerHTML = `${head}<span><span class="lg-k">Close</span><span class="num ${lineCls}">${f(b.close ?? b.value)}</span></span>`;
     return;
   }
   const cls = b.close >= b.open ? 'up' : 'down';
-  legendEl.innerHTML = head + [['O', b.open], ['H', b.high], ['L', b.low], ['C', b.close]]
+  legendEl.innerHTML = head + [['Open', b.open], ['High', b.high], ['Low', b.low], ['Close', b.close]]
     .map(([k, v]) => `<span><span class="lg-k">${k}</span><span class="num ${cls}">${f(v)}</span></span>`).join('');
 }
 chart.subscribeCrosshairMove((param) => {
   const d = param.time ? param.seriesData.get(priceSeriesByStyle[state.currentStyle]) : null;
   updateLegend(d || null);
 });
+
+// Chart construction above only sets colors once, at module load. Lightweight Charts
+// doesn't watch CSS variables, so a theme switch must explicitly reapply every color —
+// `COLORS` itself is refreshed first (see state.js refreshColors()), this just pushes it.
+export function applyThemeToChart() {
+  chart.applyOptions({
+    layout: { background: { color: COLORS.bg }, textColor: COLORS.text },
+    grid: { vertLines: { color: COLORS.grid }, horzLines: { color: COLORS.grid } },
+    crosshair: {
+      vertLine: { color: COLORS.crosshair, labelBackgroundColor: token('--bg-3') },
+      horzLine: { color: COLORS.crosshair, labelBackgroundColor: token('--bg-3') },
+    },
+    rightPriceScale: { borderColor: COLORS.border },
+    timeScale: { borderColor: COLORS.border },
+  });
+  candleSeries.applyOptions({ upColor: COLORS.up, downColor: COLORS.down, wickUpColor: COLORS.up, wickDownColor: COLORS.down });
+  barSeries.applyOptions({ upColor: COLORS.up, downColor: COLORS.down });
+  if (state.lineAreaUp !== null) applyLineAreaColor(state.lineAreaUp);
+  else {
+    lineSeries.applyOptions({ color: COLORS.accent });
+    areaSeries.applyOptions({ lineColor: COLORS.accent, topColor: alpha(COLORS.accent, 0.35), bottomColor: alpha(COLORS.accent, 0) });
+  }
+  renderIndicators();
+}
 
 // fitContent() butts the first candle against the left edge (half-clipped) and the newest
 // one against the price axis; a little air on both sides reads as finished.

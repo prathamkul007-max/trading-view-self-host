@@ -1,4 +1,4 @@
-import { areaSeries, barSeries, candleSeries, chart, computeDayBoundaries, fitWithPadding, lineSeries, renderIndicators, syncStyleData, updateLegend, updateWatermark, volumeSeries } from './chart.js';
+import { applyLineAreaColor, areaSeries, barSeries, candleSeries, chart, computeDayBoundaries, fitWithPadding, lineSeries, renderIndicators, syncStyleData, updateLegend, updateWatermark, volumeSeries } from './chart.js';
 import { $, COLORS, INTERVAL_LABEL, INTERVAL_SECONDS, displayName, state, unsuppressSoon } from './state.js';
 import { hideChartState, setConn, setIntervalUI, setLoading, setRangeUI, showChartState, showFreshness, toast } from './ui.js';
 import { updateFuturesToggle } from './futures.js';
@@ -145,6 +145,7 @@ export async function pollQuote() {
     changeEl.textContent = `${up ? '▲' : '▼'} ${up ? '+' : ''}${q.change.toFixed(2)} (${q.changePercent.toFixed(2)}%)`;
     changeEl.className = `chip ${up ? 'up' : 'down'}`;
     document.title = `${q.price.toFixed(2)} ${displayName(state.currentSymbol)} — Orazio`;
+    applyLineAreaColor(up);
 
     if (state.lastPolledPrice !== null && q.price !== state.lastPolledPrice) {
       const dir = q.price > state.lastPolledPrice ? 'flash-up' : 'flash-down';

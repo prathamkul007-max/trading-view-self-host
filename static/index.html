@@ -68,18 +68,30 @@
         <option value="area">Area</option>
       </select>
 
+      <button type="button" class="btn icon" id="measure-btn" aria-pressed="false" aria-label="Measure tool" title="Measure: click two points on the chart to see the change between them">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6.5" y1="17.5" x2="17.5" y2="6.5" stroke-dasharray="2.5 2.5"/><circle cx="6" cy="18" r="1.8" fill="currentColor" stroke="none"/><circle cx="18" cy="6" r="1.8" fill="currentColor" stroke="none"/></svg>
+      </button>
+
       <span class="sep"></span>
 
       <label class="toggle always" style="--dot:#f0b90b"><input type="checkbox" id="sma20"><span>SMA 20</span></label>
       <label class="toggle always" style="--dot:#7e57c2"><input type="checkbox" id="sma50"><span>SMA 50</span></label>
+      <label class="toggle always" style="--dot:#4c8dff"><input type="checkbox" id="sma200"><span>SMA 200</span></label>
       <label class="toggle always" style="--dot:#26a69a"><input type="checkbox" id="vol" checked><span>Volume</span></label>
 
       <span class="spacer"></span>
 
       <label class="toggle" id="futures-toggle" style="--dot:#4c8dff" title="Switch between the index and its futures contract"><input type="checkbox" id="futures"><span>Futures</span></label>
+      <button type="button" class="btn" id="movers-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l5-5 4 4 8-8M14 8h6v6"/></svg>
+        <span class="label">Top Movers</span>
+      </button>
       <button type="button" class="btn" id="options-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
         <span class="label">Options</span>
+      </button>
+      <button type="button" class="btn icon" id="theme-toggle" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/><circle cx="12" cy="12" r="4"/></svg>
       </button>
       <button type="button" class="btn icon" id="refresh" aria-label="Refresh data" title="Refresh data">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg>
@@ -90,6 +102,7 @@
       <div class="progress" aria-hidden="true"></div>
       <div class="legend" id="legend" aria-live="off"></div>
       <div id="day-lines" aria-hidden="true"></div>
+      <div id="measure-overlay" aria-hidden="true"></div>
       <div id="chart"></div>
       <div class="chart-state" id="chart-state" role="status">
         <h2 id="chart-state-title"></h2>
@@ -161,6 +174,24 @@
     </div>
     <div class="feed-strip" id="feed-strip"></div>
     <div class="modal-body" id="feed-body"></div>
+  </div>
+</div>
+
+<div class="backdrop" id="movers-modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="movers-title">
+    <div class="modal-head">
+      <h2 id="movers-title">Top Movers</h2>
+      <div class="seg" id="movers-universe" role="group" aria-label="Universe">
+        <button type="button" data-universe="allSec" aria-pressed="true">Market</button>
+        <button type="button" data-universe="NIFTY" aria-pressed="false">NIFTY</button>
+        <button type="button" data-universe="BANKNIFTY" aria-pressed="false">BankNifty</button>
+      </div>
+      <span id="movers-asof" class="feed-pill" data-live="false">—</span>
+      <button type="button" class="btn icon" id="movers-close" aria-label="Close top movers">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="movers-body"></div>
   </div>
 </div>
 

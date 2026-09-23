@@ -6,7 +6,8 @@ export function savePrefs() {
   try {
     localStorage.setItem(PREFS_KEY, JSON.stringify({
       symbol: state.currentSymbol, style: state.currentStyle,
-      sma20: $('sma20').checked, sma50: $('sma50').checked, vol: $('vol').checked,
+      sma20: $('sma20').checked, sma50: $('sma50').checked, sma200: $('sma200').checked, vol: $('vol').checked,
+      theme: document.documentElement.dataset.theme || 'dark',
     }));
   } catch (e) { /* storage unavailable (private mode) — preferences just won't persist */ }
 }

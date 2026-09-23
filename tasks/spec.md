@@ -417,3 +417,178 @@ The closing value appears in the price and change, not as a final candle.
 Measured feed map (README "Data sources: what feeds each index"): Yahoo tick age 1-5 s for the NSE
 indices; BSE stream 2-3 s for SENSEX; CME futures 10.1 min delayed; KOSPI / TAIEX / CSI 300 / SSE showed
 no delay at their close (one day, sessions already over); US indices not measured (market closed).
+
+## Increment 10: hover color fix, measure tool, full OHLC labels, market breadth, top movers, 200 SMA, light mode
+
+### Objective
+Seven requested additions/fixes to the charting UI and data surfaced, in one batch:
+1. A hover-value color that currently reads as blue should read as green/red instead.
+2. Ability to pick two points on the chart and see the % change between them.
+3. The OHLC legend should spell out "Open/High/Low/Close", not single letters.
+4. Each index should show, live, how many of its constituent stocks are up vs down.
+5. A "Top Gainers/Losers" tab/modal.
+6. A 200-period SMA alongside the existing SMA 20/50.
+7. A light theme, toggleable alongside the current (only) dark theme.
+
+### Verified facts (checked live against the running app and NSE before writing this)
+- **The "blue" is the Line/Area chart style.** Reproduced by switching chart style to Line: the
+  series line, its right-axis last-value tag, and the legend's "C" value are all rendered in
+  `--accent` (`#4c8dff`, blue) — a fixed color unrelated to whether the index is up or down.
+  Candle/Bar style already colors correctly (teal up / red down per bar). Confirmed via a live
+  browser screenshot (2026-09-23, NIFTY, price 23430.60, line + axis tag + legend all blue).
+- **The legend currently reads exactly `O`/`H`/`L`/`C`** (confirmed in the same screenshot) — single
+  letters with no full word anywhere, including for Line/Area style where only `C` shows.
+- **NSE's `/api/allIndices`** (already polled by `orazio/cas.py` and cached) returns `advances`,
+  `declines`, and `unchanged` **per index row**, live. Verified: NIFTY 50 → `{advances: 35, declines:
+  15, unchanged: 0}` right now. This covers NIFTY, BANK NIFTY, and NIFTY IT (the three NSE indices
+  this app already tracks by name) at zero extra request cost — it's the same payload already being
+  fetched.
+- **No public per-constituent breadth feed exists for SENSEX or any of the non-Indian indices**
+  (SPX, NASDAQ, DOWJONES, KOSPI, TAIEX, CHINA, SSE) — searched, none found. This mirrors the existing
+  CAS pattern ("No public auction feed: SPX, NASDAQ, ...").
+- **NSE's `/api/live-analysis-variations?index=gainers|loosers`** is live and free (same cookie
+  pattern as every other NSE call here). It returns pre-sorted mover lists **segmented by universe**:
+  `NIFTY`, `BANKNIFTY`, `NIFTYNEXT50`, `SecGtr20`, `SecLwr20`, `FOSec`, `allSec` (whole market). Verified
+  live: NIFTY gainers today led by BAJFINANCE (+2.59%), HINDALCO (+1.68%), each row carrying
+  `symbol`, `open_price`, `high_price`, `low_price`, `ltp`, `prev_price`, `perChange`, `trade_quantity`.
+  No such endpoint/universe exists for NIFTYIT, SENSEX, or any non-Indian index.
+- **`equity-stockIndices` (a commonly-cited NSE endpoint for per-index constituent lists) 404s** on
+  this app's existing NSE session/cookie handling — not used.
+- **Every color in `static/styles.css` is a `var(--token)` reference** off a single `:root` block —
+  a light theme is a second token block keyed off `[data-theme="light"]`, not a rule-by-rule rewrite.
+  The one non-token exception is `color-scheme: dark` and a few hardcoded `rgba(0,0,0,...)` modal/toast
+  shadow colors, which read fine unchanged under a light theme (dark overlays remain conventional).
+- **Chart colors are computed once** (`COLORS` in `static/js/state.js`, read via `getComputedStyle` at
+  module load) and handed to Lightweight Charts at series-creation time. Lightweight Charts does not
+  watch CSS variables — switching the theme requires recomputing `COLORS` and calling `applyOptions()`
+  on the chart and every series (main chart + the 4 CAS-movement quad charts) after the token swap.
+
+### Assumptions (proceeding unless corrected)
+1. **Hover-color fix, scope:** applies to Line and Area chart styles only (Candle/Bar are already
+   correct). The line color, its last-value axis tag, and the legend's Close value all switch between
+   `--up` (green) and `--down` (red) based on **current price vs. the session's previous close**
+   (same comparison already used for the price-ticker chip), not vs. the previous bar. This matches
+   how a trader reads a line chart (one color for "the day," not per-tick flicker) and reuses data
+   the quote poll already has (`change`/`changePercent` from `/api/quote`).
+2. **Measure tool, interaction model:** a new toolbar toggle button ("Measure", ruler icon). While
+   active: first click sets point A, second click sets point B and draws a line between them with a
+   floating label showing Δ price, Δ % (B vs A), and the time/bar span between them; a third click
+   starts a new measurement from that point; **Escape** or toggling the button off clears it and
+   returns to normal pan/zoom/crosshair behavior. Only one measurement is shown at a time (not a
+   stack of saved measurements) — this is a scratch tool, not an annotation feature.
+3. **Measure tool, implementation:** built the same way the existing day-boundary lines are (a
+   positioned DOM overlay synced to `timeToCoordinate`/`priceToCoordinate` on pan/zoom), since
+   Lightweight-Charts v4 has no primitives API for custom drawings — consistent with the existing
+   `renderDayLines` pattern in `chart.js`.
+4. **OHLC labels:** legend shows the full words ("Open", "High", "Low", "Close") instead of single
+   letters, for both the default (last bar) and hover (crosshair bar) states, in both Candle/Bar mode
+   (all four) and Line/Area mode (Close only, per assumption 1's color fix).
+5. **Market breadth, scope:** live advances/declines/unchanged shown for NIFTY, BANK NIFTY, and NIFTY
+   IT only (the ones NSE's `allIndices` already covers). SENSEX and every non-Indian rail index show
+   no breadth line at all (not a "0/0" or an "unavailable" placeholder) — consistent with how those
+   indices already have no CAS row content beyond the "no public feed" note, rather than adding visual
+   noise to 8 rail rows that can never have this data.
+6. **Market breadth, placement:** shown "on the side" = directly under each of the three eligible
+   rail buttons (NIFTY/BANKNIFTY/NIFTYIT), as small green "▲35" / red "▼15" counts — same rail
+   real estate pattern the app already uses for the symbol name subtitle, not a separate new panel.
+   Backed by a new `GET /api/breadth` endpoint that reuses the already-polled/cached `allIndices`
+   response (no new outbound NSE traffic), polled by the frontend every 5s.
+7. **Top movers, scope:** one new modal (opened via a new toolbar button, next to Options) defaulting
+   to **whole-market** movers (`allSec`) with a small **NIFTY / BANK NIFTY / Market** segmented toggle
+   inside the modal (mirroring the existing pre-open feed's "F&O / All" toggle pattern) — because
+   `live-analysis-variations` doesn't cover NIFTYIT, SENSEX, or any global index, a fixed "top movers
+   for whatever symbol is on screen" design would be unavailable most of the time. Two side-by-side
+   tables (Gainers / Losers), sorted by `perChange`, refreshed every ~10s while the modal is open —
+   matching the existing CAS-feed modal's poll cadence pattern (that one is 3s because auctions move
+   fast; movers don't need that).
+8. **200 SMA:** a third checkbox ("SMA 200") next to the existing SMA 20/50, computed the same way
+   (over whichever candles are currently loaded/displayed, whatever the interval) — consistent with
+   how SMA 20/50 already behave (they're "N bars," not "N calendar days," on intraday intervals too).
+   It will render empty until 200 bars are loaded (same as SMA 20/50 today with fewer bars). Line
+   color: a fourth distinct color not already used (SMA20=amber, SMA50=purple) — proposing a light
+   blue/cyan, distinct from both the up/down palette and the accent color freed up by fix #1.
+9. **Light mode, scope:** a single toolbar toggle (sun/moon icon) that flips a `data-theme` attribute
+   on `<html>`, persisted in the existing `localStorage` prefs blob alongside symbol/style/SMA/volume.
+   Defaults to the current dark theme for existing and new users (no OS `prefers-color-scheme` auto
+   switch in this pass — explicit user choice only, since silently changing an already-configured
+   look on next visit would be surprising). Applies app-wide: rail, toolbar, all modals, and the
+   chart itself (colors recomputed and reapplied per the "Chart colors are computed once" fact above).
+10. **Scope boundary:** this increment does not add a broker-grade real-time breadth feed, does not
+    persist/save measurements, does not add more than one light palette, and does not extend top-movers
+    to any market this app doesn't already have an NSE feed for.
+→ Correct me now on 2 (measure-tool interaction), 6 (breadth placement), 7 (top-movers scope), or 9
+  (light-mode default/scope) in particular — those are the ones with real design latitude — or I'll
+  build to all ten as written.
+
+### Tech Stack
+No change: Flask + yfinance/NSE/BSE backend, vanilla JS ES modules + Lightweight-Charts frontend,
+plain CSS custom properties. No new dependencies (frontend or backend) — everything above is served
+by data/CSS mechanisms already in the codebase.
+
+### Project Structure (files this touches)
+```
+orazio/routes.py       → new GET /api/breadth ; new GET /api/movers
+orazio/cas.py or a new orazio/breadth.py  → per-index advances/declines shaping, mover-list shaping
+orazio/nse_client.py   → reused as-is (same nse_get())
+static/js/chart.js     → hover-color fix (line/area), full OHLC legend words, SMA 200 series
+static/js/data.js      → wire live price vs. prevClose into the line/area color decision
+static/js/rail.js      → per-rail-item breadth counts, poll + render
+static/js/state.js     → COLORS becomes recomputable; add light-theme token awareness
+new static/js/measure.js   → the two-point measure tool
+new static/js/movers.js    → the Top Gainers/Losers modal
+static/js/main.js      → wire the new measure/theme toggle buttons + boot state
+static/js/prefs.js     → persist theme choice alongside existing prefs
+static/index.html      → new toolbar buttons (measure, theme, top-movers), new modal markup
+static/styles.css      → `[data-theme="light"]` token block; new small styles for breadth counts,
+                          measure-tool overlay/label, movers modal, SMA 200 toggle
+tests/                 → unit tests for the new breadth/movers shaping functions (pure logic, same
+                          pattern as test_cas.py)
+```
+
+### Code Style
+Same as the rest of the codebase: new backend functions follow the existing `{available: false,
+reason: "..."}` pattern instead of erroring when NSE data isn't available for a given index; new
+frontend modules follow the existing ES-module-per-feature split (state object, no framework,
+DOM helpers from `state.js`).
+
+### Testing Strategy
+Backend: pytest unit tests for the new pure shaping functions (breadth row → `{alias, advances,
+declines, unchanged}`; NSE mover row → the frontend's row shape), same style as `tests/test_cas.py`.
+No unit tests for frontend JS (matches current project convention — verified manually in-browser via
+chrome-devtools instead, as done for every prior increment).
+Manual verification (browser): line/area chart on an up day and a down day both color correctly;
+measure tool across a few bar counts and directions; legend words in all 4 chart styles; breadth
+counts visible under NIFTY/BANKNIFTY/NIFTYIT only and ticking; movers modal opens, sorts, and the
+universe toggle switches data; SMA 200 draws once 200+ bars are loaded; theme toggle flips the whole
+app including an already-open chart, and persists across a reload.
+
+### Boundaries
+- Always: keep the existing "unavailable, not fabricated" pattern for any index/market NSE doesn't
+  cover (breadth, movers) — never approximate or show a fake 0.
+- Ask first: adding any new outbound data source beyond NSE/Yahoo/BSE already in use; changing the
+  default theme away from dark; changing existing SMA 20/50 behavior.
+- Never: add a paid data source; scrape a site with ToS against it; block the main chart's load on
+  the new breadth/movers requests (they are independent, best-effort polls).
+
+### Success Criteria
+1. Line and Area styles color green when price ≥ previous close, red otherwise — on the series line,
+   its axis last-value tag, and the legend Close value.
+2. Clicking Measure, then two points on the chart, shows a line + label with Δ price and Δ % between
+   them; Escape/toggle-off clears it.
+3. Legend shows "Open"/"High"/"Low"/"Close" (or "Close" alone in Line/Area) instead of single letters.
+4. NIFTY, BANK NIFTY, and NIFTY IT rail items show live advance/decline counts that change without a
+   page reload; no other rail item shows a breadth line.
+5. A Top Gainers/Losers modal opens from the toolbar, defaults to whole-market movers, and can switch
+   to NIFTY/BANK NIFTY; both tables are sorted by % change and update while open.
+6. SMA 200 checkbox draws a 4th distinct-colored line once enough bars are loaded, matching the
+   existing SMA 20/50 mechanics.
+7. A theme toggle switches the entire app (including the live chart's own colors) between the
+   current dark theme and a new light theme, and the choice survives a page reload.
+
+### Open Questions
+None — all four flagged decisions confirmed as proposed (2026-09-23):
+1. Measure tool: toolbar toggle button, click-click, confirmed.
+2. Breadth placement: small counts under each eligible rail item, confirmed.
+3. Top movers: whole-market default with a NIFTY/BANKNIFTY toggle inside the modal, confirmed.
+4. Theme default: manual toggle, defaults to dark, confirmed.
+Proceeding to Plan on all ten items as written.

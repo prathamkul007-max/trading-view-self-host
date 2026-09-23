@@ -1,17 +1,18 @@
 # Orazio
 
-A self-hosted, TradingView-style charting terminal for Indian and global indices — Flask backend, Lightweight-Charts frontend.
-
-**No login. No account. No cloud service in between.** You run it on your own machine; your browser talks straight to your local server, which talks straight to the exchanges' own public endpoints. Nobody else sees what you're watching. No build step, no database, no API keys, no subscription — every data source used is free and public.
+Self-hosted charting for Indian and global indices — Flask backend, Lightweight-Charts frontend. Runs on your machine, talks straight to Yahoo/NSE/BSE's own public endpoints. No login, no account, no API keys, nothing to pay for.
 
 ## Features
 
-- **Live candles.** Quotes every 2 s; the newest candle opens locally, so the chart keeps up with the market between refreshes.
-- **Data-age badge.** `Live · 3s`, amber `Delayed 10m` for provider-delayed feeds, grey `Closed` — always honest about how stale a number is.
-- **Real-time SENSEX** from BSE's own push stream (Yahoo delays it ~15 min).
-- **CAS terminal.** A dedicated Call Auction Session workspace: a left-rail countdown panel, a full-screen **Live CAS movement** view (NIFTY, BANK NIFTY, NIFTY IT and SENSEX in four quadrants, each measured against the last value at 15:14:59), and a stock-by-stock **live auction feed** with sortable columns and per-symbol order books — for both the 09:00 pre-open and the 15:15 closing auction.
-- **Charting.** 11-index rail, candles/bars/line/area, 1m–1D bars, 1D–All ranges, drag left to lazy-load older days, SMA 20/50 and volume overlays, instant symbol search.
-- **Derivatives.** Cash/futures toggle for SPX, Nasdaq and Dow; options chains for US stocks.
+- Live candles — quotes every 2s, current bar gets patched in as it moves instead of waiting for a refetch.
+- Data-age badge (`Live · 3s`, `Delayed 10m`, `Closed`) so a stale feed never looks like a broken app.
+- SENSEX from BSE's own push stream — Yahoo delays it ~15 min.
+- CAS terminal: a countdown panel, a 4-quadrant live movement view (NIFTY, BANK NIFTY, NIFTY IT, SENSEX vs. the 15:14:59 reference), and a stock-by-stock auction feed with order books — pre-open and closing auction both.
+- Charting: 11-index rail, candles/bars/line/area, 1m–1D bars, 1D–All ranges, drag left for older days, SMA 20/50/200, volume, symbol search, a two-point measure tool (click two points, get Δ price/%/time).
+- Cash/futures toggle for SPX/Nasdaq/Dow; options chains for US stocks.
+- Market breadth (advances/declines) under NIFTY, BANK NIFTY, NIFTY IT, SENSEX, DOW JONES, S&P 500 and CSI 300 in the rail. NSE hands the first three out for free; the other four are computed here from each index's own constituents (batched yfinance calls, not a live feed). NASDAQ, KOSPI, TAIEX and Shanghai don't get a line — no accurate free constituent list exists for them, and a guessed subset would misrepresent the index.
+- Top Movers tab: gainers/losers for the whole market, or just NIFTY/BANK NIFTY.
+- Light mode toggle, remembers your choice.
 
 ## Quick start
 
@@ -63,7 +64,9 @@ flowchart LR
 | `orazio/symbols.py` | Symbol validation and interval/range resolution |
 | `orazio/candles.py` | Shapes yfinance OHLCV data into API rows |
 | `orazio/market_data.py` | Live quote sources (Yahoo/BSE/yfinance/NSE) and the live-bar aggregator built on them |
-| `orazio/cas.py` | Call Auction Session: phase/session logic, NSE index polling, reference-price calc, feed normalization |
+| `orazio/cas.py` | Call Auction Session: phase/session logic, NSE index polling, reference-price calc, feed normalization; also NSE-native market breadth for NIFTY/BANK NIFTY/NIFTY IT |
+| `orazio/constituents.py` | Self-computed breadth for SENSEX/DOW/S&P 500/CSI 300 from their own constituents (Wikipedia-scraped lists for the two big ones — not hand-typed); combined with `cas.py`'s into `/api/breadth` |
+| `orazio/movers.py` | Top gainers/losers by universe (whole market, NIFTY, BANK NIFTY) — `/api/movers` |
 | `orazio/nse_client.py` | Shared cookie-authenticated NSE JSON fetcher |
 | `orazio/bse_stream.py` | BSE Socket.IO client, TLS verified against the missing intermediate certificate |
 | `orazio/poller.py` | Starts every background thread exactly once |
@@ -73,11 +76,14 @@ flowchart LR
 
 | Module | Purpose |
 |---|---|
-| `state.js` | Shared app state, formatters, design tokens |
-| `chart.js` | Lightweight-Charts setup, series, indicators, legend |
+| `state.js` | Shared app state, formatters, design tokens (recomputable — see `refreshColors()`) |
+| `chart.js` | Lightweight-Charts setup, series, indicators, legend, theme reapplication |
 | `data.js` | Candle loading, history lazy-load, live quote polling |
-| `symbol.js`, `rail.js`, `futures.js`, `options.js` | Symbol search, the index rail, the cash/futures toggle, the options modal |
+| `symbol.js`, `rail.js`, `futures.js`, `options.js` | Symbol search, the index rail (incl. breadth counts), the cash/futures toggle, the options modal |
 | `cas-panel.js`, `cas-movement.js`, `cas-feed.js` | The CAS terminal: countdown panel, live movement modal, stock-by-stock feed |
+| `measure.js` | Two-point measure tool (click two points for Δ price/%/time) |
+| `movers.js` | Top Gainers/Losers modal |
+| `theme.js` | Light/dark theme toggle |
 | `ui.js`, `prefs.js`, `main.js` | Generic UI helpers, saved preferences, boot + control wiring |
 
 Other paths:

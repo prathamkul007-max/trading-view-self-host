@@ -174,6 +174,37 @@ def normalise_cas_book(order_book):
             for i in items if isinstance(i, dict)]
 
 
+def breadth_from_all_indices(payload):
+    """Shape NSE's `allIndices` rows into per-index breadth. NSE already publishes
+    advances/declines/unchanged on each index row of that same payload this app already
+    polls for /api/cas — no extra request needed. Only the indices we track by name are
+    returned; an index missing from the payload or missing the count fields is skipped
+    rather than reported as zero."""
+    by_name = {row.get("index"): row for row in (payload or {}).get("data", [])}
+    rows = []
+    for alias, nse_name in NSE_INDEX_NAMES.items():
+        row = by_name.get(nse_name)
+        if not row:
+            continue
+        try:
+            advances, declines, unchanged = int(row["advances"]), int(row["declines"]), int(row["unchanged"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        rows.append({"alias": alias, "advances": advances, "declines": declines, "unchanged": unchanged})
+    return rows
+
+
+def breadth_rows():
+    payload = all_indices()
+    return breadth_from_all_indices(payload)
+
+
+def all_indices():
+    """`allIndices`, cached like every other NSE poll here — shared by /api/cas and
+    /api/breadth so polling both doesn't double the outbound NSE traffic."""
+    return cached(("all-indices", ""), QUOTE_CACHE_TTL, lambda: nse_get("/api/allIndices"))
+
+
 def _save_seed():
     today = datetime.now(IST).strftime("%Y-%m-%d")
     seed = {

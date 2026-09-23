@@ -21,6 +21,8 @@ export function dayKey(t) {
 }
 
 // ---------- design tokens shared with styles.css ----------
+// getComputedStyle() returns a LIVE view of the element's style, so token() always
+// reflects whichever [data-theme] block is currently active — no re-query needed.
 const css = getComputedStyle(document.documentElement);
 const token = (n) => css.getPropertyValue(n).trim();
 const alpha = (hex, a) => {
@@ -29,11 +31,21 @@ const alpha = (hex, a) => {
 };
 export { token, alpha };
 
-export const COLORS = {
-  bg: token('--bg-1'), grid: token('--line'), border: token('--line-strong'), text: token('--text-dim'),
-  accent: token('--accent'), up: token('--up'), down: token('--down'),
-  volUp: alpha(token('--up'), 0.45), volDown: alpha(token('--down'), 0.45),
-};
+function computeColors() {
+  return {
+    bg: token('--bg-1'), grid: token('--line'), border: token('--line-strong'), text: token('--text-dim'),
+    accent: token('--accent'), up: token('--up'), down: token('--down'), crosshair: token('--crosshair'),
+    volUp: alpha(token('--up'), 0.45), volDown: alpha(token('--down'), 0.45),
+  };
+}
+
+// A single mutated-in-place object (not reassigned) so every `COLORS.x` read across the
+// app — all of them at call time, none destructured into a local at import time — keeps
+// working after a theme switch without touching every consumer file.
+export const COLORS = computeColors();
+export function refreshColors() {
+  Object.assign(COLORS, computeColors());
+}
 
 // "ES=F" is the CME's S&P 500 futures contract — real, but unreadable. Show its name.
 export const displayName = (sym) => (state.CONFIG.futuresMeta && state.CONFIG.futuresMeta[sym] && state.CONFIG.futuresMeta[sym].name) || sym;
@@ -63,6 +75,9 @@ export const state = {
   lastPolledPrice: null,
   quotesInFlight: 0,
   tickChangedAt: 0,
+  // Line/Area series color follows the session's direction (current price vs. previous
+  // close), not a fixed accent color. null = not known yet (no quote polled for this symbol).
+  lineAreaUp: null,
 };
 
 export function unsuppressSoon() {

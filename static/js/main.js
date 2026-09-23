@@ -3,7 +3,8 @@ import { applyStyle, priceSeriesByStyle, renderIndicators } from './chart.js';
 import { loadCandles, pollQuote } from './data.js';
 import { loadPrefs, savePrefs } from './prefs.js';
 import { loadCas } from './cas-panel.js';
-import { loadConfig } from './rail.js';
+import { loadBreadth, loadConfig } from './rail.js';
+import { applyTheme } from './theme.js';
 import { $, state } from './state.js';
 import { setIntervalUI } from './ui.js';
 
@@ -13,6 +14,8 @@ import './futures.js';
 import './options.js';
 import './cas-feed.js';
 import './cas-movement.js';
+import './measure.js';
+import './movers.js';
 
 $('chart-state-retry').addEventListener('click', () => loadCandles());
 
@@ -21,7 +24,7 @@ document.querySelectorAll('#interval-seg button').forEach(btn => {
 });
 $('style').addEventListener('change', (e) => { applyStyle(e.target.value); savePrefs(); });
 $('refresh').addEventListener('click', () => loadCandles());
-for (const id of ['sma20', 'sma50', 'vol']) {
+for (const id of ['sma20', 'sma50', 'sma200', 'vol']) {
   $(id).addEventListener('change', () => { renderIndicators(); savePrefs(); });
 }
 document.querySelectorAll('#range-bar button').forEach(btn => {
@@ -40,7 +43,9 @@ document.querySelectorAll('#range-bar button').forEach(btn => {
   if (p.style && priceSeriesByStyle[p.style]) { $('style').value = p.style; applyStyle(p.style); }
   if (typeof p.sma20 === 'boolean') $('sma20').checked = p.sma20;
   if (typeof p.sma50 === 'boolean') $('sma50').checked = p.sma50;
+  if (typeof p.sma200 === 'boolean') $('sma200').checked = p.sma200;
   if (typeof p.vol === 'boolean') $('vol').checked = p.vol;
+  applyTheme(p.theme === 'light' ? 'light' : 'dark');
 })();
 
 loadConfig();
@@ -49,3 +54,9 @@ loadCandles();
 pollQuote();
 setInterval(() => { if (state.quotesInFlight === 0) pollQuote(); }, 2000);
 setInterval(() => loadCandles({ preserveView: true }), 60000);
+setInterval(loadBreadth, 5000);
+
+$('theme-toggle').addEventListener('click', () => {
+  applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
+  savePrefs();
+});
