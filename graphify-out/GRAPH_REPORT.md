@@ -1,105 +1,135 @@
-# Graph Report - sasta-trading-view  (2026-09-21)
+# Graph Report - sasta-trading-view  (2026-09-22)
 
 ## Corpus Check
-- Corpus is ~8,313 words - fits in a single context window. You may not need a graph.
+- 38 files · ~23,027 words
+- Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 80 nodes · 123 edges · 11 communities (8 shown, 3 thin omitted)
-- Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 12 edges (avg confidence: 0.87)
-- Token cost: 0 input · 0 output
+- 305 nodes · 617 edges · 19 communities (13 shown, 6 thin omitted)
+- Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 34 edges (avg confidence: 0.72)
+- Token cost: 0 input · 105,044 output
 
 ## Community Hubs (Navigation)
-- Flask Backend API
-- Candle Loading & Chart State
-- Config, Futures & Options Panel
-- Live Quote & Chart Setup
-- Interval/Range Resolution
-- Day Boundary Overlay
-- Symbol Rail & Search
-- Spec, Plan & Todo Docs
-- Chrome DevTools MCP
-- Flask Dependencies
-- Wheel-Zoom Granularity (Removed)
+- Live Quote Sources & Caching
+- Charting UI & Indicators
+- CAS Terminal (Auction Modals)
+- Derivatives: Futures & Options
+- BSE Push Stream Client
+- Symbol & Range Validation
+- CAS Session & Auction Feed Logic
+- App Entry Point & Config
+- Candle Shaping & Tests
+- Backend/Frontend Wiring Increment
+- Real-Time Quotes & SENSEX Planning
+- Chrome DevTools MCP Config
+- Live Chart Parity Planning
+- Range-Event Race-Condition Fix
+- Project Root
+- Test Runner Dependency
+- HTTP Client Dependency
+- Session Boundary Markers
 
 ## God Nodes (most connected - your core abstractions)
-1. `loadCandles()` - 15 edges
-2. `loadMoreHistory()` - 10 edges
-3. `candles_history()` - 7 edges
-4. `latestCandles (state)` - 7 edges
-5. `candles()` - 6 edges
-6. `quote()` - 6 edges
-7. `options()` - 6 edges
-8. `pollQuote()` - 6 edges
-9. `computeDayBoundaries()` - 6 edges
-10. `Stale request race (bug) and mitigations` - 6 edges
+1. `loadCandles()` - 18 edges
+2. `esc()` - 17 edges
+3. `cas_phase()` - 11 edges
+4. `clean_symbol()` - 11 edges
+5. `BseStream` - 10 edges
+6. `cached()` - 10 edges
+7. `nse_get()` - 10 edges
+8. `displayName()` - 10 edges
+9. `state` - 10 edges
+10. `ensure_poller()` - 9 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Range click reused wider range's interval (bug)` --references--> `resolve_interval_range()`  [INFERRED]
-  tasks/todo.md → app.py
-- `NSE low-latency quote source` --references--> `nse_live_quote()`  [INFERRED]
-  tasks/spec.md → app.py
-- `Server-side interval/range validation boundary` --references--> `resolve_interval_range()`  [EXTRACTED]
-  tasks/spec.md → app.py
-- `loadConfig()` --references--> `config()`  [EXTRACTED]
-  static/index.html → app.py
-- `Left quick-access index rail` --references--> `config()`  [EXTRACTED]
-  tasks/spec.md → app.py
+- `test_normalise_cas_rows_handles_empty_payload()` --calls--> `normalise_cas_rows()`  [EXTRACTED]
+  tests/test_cas.py → orazio/cas.py
+- `test_normalise_cas_rows_maps_nse_field_names()` --calls--> `normalise_cas_rows()`  [EXTRACTED]
+  tests/test_cas.py → orazio/cas.py
+- `test_normalise_cas_book_flags_the_equilibrium_rung()` --calls--> `normalise_cas_book()`  [EXTRACTED]
+  tests/test_cas.py → orazio/cas.py
+- `test_normalise_cas_book_handles_non_list_input()` --calls--> `normalise_cas_book()`  [EXTRACTED]
+  tests/test_cas.py → orazio/cas.py
+- `test_clean_symbol_defaults_when_blank()` --calls--> `clean_symbol()`  [EXTRACTED]
+  tests/test_symbols.py → orazio/symbols.py
 
 ## Import Cycles
-- None detected.
+- 3-file cycle: `static/js/data.js -> static/js/futures.js -> static/js/symbol.js -> static/js/data.js`
 
 ## Hyperedges (group relationships)
-- **Stale/programmatic-event guard mechanisms in the chart frontend** — static_index_loadgeneration, static_index_candlesabortcontroller, static_index_suppressrangeevents, static_index_loadcandles, static_index_loadmorehistory [INFERRED 0.85]
-- **Drag-to-load history flow** — static_index_visible_range_listener, static_index_loadmorehistory, app_candles_history, static_index_latestcandles, static_index_computedayboundaries [INFERRED 0.85]
-- **Symbol switch flow (rail, search, futures toggle)** — static_index_rail, static_index_symbol_search_handler, static_index_updatefuturestoggle, static_index_switchsymbol, static_index_loadcandles, static_index_pollquote [INFERRED 0.85]
+- **CAS terminal: panel, movement view, feed and backend logic form one feature** — readme_cas_terminal, orazio_cas, static_js_cas_panel, static_js_cas_movement, static_js_cas_feed [EXTRACTED 1.00]
+- **Real-time price pipeline across Yahoo, BSE stream and websockets dependency** — orazio_market_data, orazio_bse_stream, readme_yahoo_finance, readme_bse_push_stream, requirements_websockets [INFERRED 0.85]
+- **Spec -> plan -> todo development lifecycle documents for the same increments** — tasks_spec_objective, tasks_plan_live_chart_parity, tasks_todo_increment4_race_fix [EXTRACTED 1.00]
 
-## Communities (11 total, 3 thin omitted)
+## Communities (19 total, 6 thin omitted)
 
-### Community 0 - "Flask Backend API"
+### Community 0 - "Live Quote Sources & Caching"
+Cohesion: 0.06
+Nodes (63): cached(), A tiny TTL cache for coalescing concurrent polls (several tabs / retries)., df_to_rows(), cas_feed_payload(), cas_payload(), cas_reference(), cas_reference_epoch(), ensure_nse_poller() (+55 more)
+
+### Community 1 - "Charting UI & Indicators"
+Cohesion: 0.08
+Nodes (51): Charting feature set, Data-age badge, Live candles feature, #interval-seg bar-interval buttons, #range-bar history range buttons, applyStyle(), areaSeries, barSeries (+43 more)
+
+### Community 2 - "CAS Terminal (Auction Modals)"
+Cohesion: 0.09
+Nodes (36): CAS terminal, #cas-move-open Live CAS movement button, #cas-open stock feed button, #cas call-auction rail section, #feed-modal live auction feed modal, #move-modal Live CAS movement modal, CAS_COLS, fcell() (+28 more)
+
+### Community 3 - "Derivatives: Futures & Options"
+Cohesion: 0.09
+Nodes (28): Derivatives (futures/options), #options-btn button, #options-modal, #symbol-input search box, priceSeriesByStyle, futuresCounterpart(), symbolInput, openOptions() (+20 more)
+
+### Community 4 - "BSE Push Stream Client"
+Cohesion: 0.11
+Nodes (15): BseStream, build_ssl_context(), _num(), Client for BSE's live push stream. BSE's own website connects to a Socket.IO v4…, BSE sends numbers as strings with thousands separators, and '-' for 'not set'., 2026-09-21 14:55:0' (seconds are not zero-padded) -> epoch seconds., A verifying SSL context that trusts certifi's roots plus BSE's missing…, _stamp() (+7 more)
+
+### Community 5 - "Symbol & Range Validation"
+Cohesion: 0.19
+Nodes (15): fixture, clean_symbol(), Symbol validation and interval/range resolution — pure functions, no I/O., Pick the coarsest interval that can actually serve the requested range.…, resolve_interval_range(), parametrize, app_context(), test_clean_symbol_defaults_when_blank() (+7 more)
+
+### Community 6 - "CAS Session & Auction Feed Logic"
 Cohesion: 0.21
-Nodes (18): candles(), candles_history(), clean_symbol(), config(), df_to_rows(), drop_spurious_flat_rows(), index(), nse_live_quote() (+10 more)
+Nodes (16): cas_phase(), _mins(), normalise_cas_book(), normalise_cas_rows(), Map NSE's CAS row fields to ours. Verified against the live 15:20 payload (210…, `orderBook` items: price / buyQuantity / sellQuantity / flag. Observed: `flag`…, Which auction window we are in, its current stage, and seconds to its…, _ist() (+8 more)
 
-### Community 1 - "Candle Loading & Chart State"
-Cohesion: 0.20
-Nodes (15): candlesAbortController, Crosshair legend handler, latestCandles (state), loadCandles(), loadGeneration (counter), loadMoreHistory(), renderIndicators(), suppressRangeEvents (flag) (+7 more)
+### Community 7 - "App Entry Point & Config"
+Cohesion: 0.22
+Nodes (7): Entry point. All application code lives in the `orazio` package., load_seed(), Restore today's reference and series after a restart. Ignored if it is from…, Environment-driven app settings. Kept deliberately tiny: everything a deployer…, Settings, create_app(), Orazio: a self-hosted TradingView-style chart backed by yfinance/NSE/BSE.
 
-### Community 2 - "Config, Futures & Options Panel"
-Cohesion: 0.20
-Nodes (11): yfinance dependency, CONFIG (quickIndices, futuresMap), futuresCounterpart(), highlightRail(), loadConfig(), openOptions(), #options-modal, updateFuturesToggle() (+3 more)
+### Community 8 - "Candle Shaping & Tests"
+Cohesion: 0.42
+Nodes (7): drop_spurious_flat_rows(), Shaping yfinance OHLCV data into the JSON rows the frontend consumes., Yahoo occasionally leaks a non-trading-day row (e.g. a Sunday) into daily…, _row(), test_drops_zero_volume_flat_rows(), test_keeps_a_real_quiet_session_with_actual_volume(), test_keeps_rows_with_real_range()
 
-### Community 3 - "Live Quote & Chart Setup"
-Cohesion: 0.29
-Nodes (7): Lightweight-Charts chart instance + series, pollQuote(), Candle freshness: patch last bar from 5s quote tick, All range truncated by minBarSpacing (bug), Playwright / chrome-devtools QA testing, pollQuote stale-symbol response (bug), Volume pane shrink (scaleMargins)
+### Community 9 - "Backend/Frontend Wiring Increment"
+Cohesion: 0.25
+Nodes (8): orazio/__init__.py (app factory), app.py (entry point), flask, flask-cors, static/index.html (page + wired UI), Increment 4: fix range/interval race conditions via threaded Flask + AbortController, Increment 5: minBarSpacing rendering-limit bug truncating 'All' range, Increment 5: pollQuote stale-symbol response guard
 
-### Community 4 - "Interval/Range Resolution"
+### Community 10 - "Real-Time Quotes & SENSEX Planning"
 Cohesion: 0.40
-Nodes (5): Pick the coarsest interval that can actually serve the requested range.…, resolve_interval_range(), #range-bar buttons, Server-side interval/range validation boundary, Range click reused wider range's interval (bug)
+Nodes (5): Prior-day drag-to-load history, Plan Increment 6: real-time quotes, SENSEX, futures naming, Rationale: avoid new yfinance calls by reusing existing quote poll, Spec Increment 6: true real-time quotes, SENSEX delay, futures naming, Rationale: NSE allIndices worse than Yahoo; Yahoo direct chart API is freshest for NSE indices; SENSEX delayed ~15min on Yahoo so BSE feed used instead
 
-### Community 5 - "Day Boundary Overlay"
-Cohesion: 0.50
-Nodes (4): computeDayBoundaries(), #day-lines DOM overlay, renderDayLines(), Day/session boundary indication
-
-### Community 6 - "Symbol Rail & Search"
-Cohesion: 0.40
-Nodes (5): #rail index sidebar, switchSymbol(), Symbol search input handler (debounced), Left quick-access index rail, Search dropdown reopening after Enter (bug)
-
-### Community 7 - "Spec, Plan & Todo Docs"
-Cohesion: 0.50
-Nodes (4): Plan: Live chart parity + TradingView-style UX, Build order (independent vs sequential), Spec: Live chart parity + TradingView-style UX, Todo: task checklist (Increments 1-5)
+### Community 12 - "Live Chart Parity Planning"
+Cohesion: 0.67
+Nodes (3): Candle freshness fix (patch last candle each tick), Plan: Live chart parity + TradingView-style UX, Spec: Live chart parity + TradingView-style UX objective
 
 ## Knowledge Gaps
-- **14 isolated node(s):** `npx`, `Crosshair legend handler`, `#options-modal`, `flask dependency`, `flask-cors dependency` (+9 more)
+- **54 isolated node(s):** `npx`, `Settings`, `feedModal`, `feedRows`, `feedSort` (+49 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **3 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `loadCandles()` connect `Candle Loading & Chart State` to `Flask Backend API`, `Config, Futures & Options Panel`, `Live Quote & Chart Setup`, `Interval/Range Resolution`, `Day Boundary Overlay`, `Symbol Rail & Search`?**
-  _High betweenness centrality (0.323) - this node is a cross-community bridge._
-- **Why does `candles()` connect `Flask Backend API` to `Candle Loading & Chart State`, `Interval/Range Resolution`?**
-  _High betweenness centrality (0.117) - this node is a cross-community bridge._
-- **Why does `loadMoreHistory()` connect `Candle Loading & Chart State` to `Flask Backend API`, `Day Boundary Overlay`?**
-  _High betweenness centrality (0.091) - this node is a cross-community bridge._
-- **What connects `npx`, `Crosshair legend handler`, `#options-modal` to the rest of the system?**
-  _14 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `Live candles feature` connect `Charting UI & Indicators` to `Live Quote Sources & Caching`?**
+  _High betweenness centrality (0.226) - this node is a cross-community bridge._
+- **Why does `CAS terminal` connect `CAS Terminal (Auction Modals)` to `Live Quote Sources & Caching`?**
+  _High betweenness centrality (0.224) - this node is a cross-community bridge._
+- **Why does `BseStream` connect `BSE Push Stream Client` to `Live Quote Sources & Caching`?**
+  _High betweenness centrality (0.049) - this node is a cross-community bridge._
+- **What connects `npx`, `Settings`, `feedModal` to the rest of the system?**
+  _54 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `Live Quote Sources & Caching` be split into smaller, more focused modules?**
+  _Cohesion score 0.059154929577464786 - nodes in this community are weakly interconnected._
+- **Should `Charting UI & Indicators` be split into smaller, more focused modules?**
+  _Cohesion score 0.08148148148148149 - nodes in this community are weakly interconnected._
+- **Should `CAS Terminal (Auction Modals)` be split into smaller, more focused modules?**
+  _Cohesion score 0.09102564102564102 - nodes in this community are weakly interconnected._
