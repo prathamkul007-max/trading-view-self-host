@@ -338,6 +338,14 @@ def cas_feed():
 @bp.route("/api/movers")
 def movers_route():
     universe = request.args.get("universe") or "allSec"
+    # NIFTY/BANKNIFTY/allSec come live from NSE (movers.py). SENSEX/DOWJONES/SPX/CHINA
+    # have no such feed, so they're computed from the same constituent data /api/breadth
+    # already polls (orazio/constituents.py) rather than a second, duplicate fetch.
+    if universe in constituents_service.CONSTITUENT_ALIASES:
+        cached = constituents_service.movers_for(universe)
+        if not cached:
+            return jsonify({"available": False, "universe": universe, "gainers": [], "losers": []})
+        return jsonify({"available": True, "universe": universe, **cached})
     return jsonify(movers_service.movers(universe))
 
 

@@ -1,10 +1,13 @@
-"""Self-computed market breadth for indices that don't publish it themselves.
+"""Self-computed market breadth AND top movers for indices that don't publish either.
 
-NIFTY/BANKNIFTY/NIFTYIT get advances/declines for free from NSE's own `allIndices`
-payload (see cas.breadth_from_all_indices) — no work needed there. Nobody publishes it
-for SENSEX or any of the global indices, so wherever a real constituent list can be
-gotten without fabricating one, we compute breadth ourselves: pull each constituent's
-last two daily closes in one batched yfinance call and count up/down/flat.
+NIFTY/BANKNIFTY/NIFTYIT get breadth for free from NSE's own `allIndices` payload (see
+cas.breadth_from_all_indices), and gainers/losers for NIFTY/BANKNIFTY/whole-market from
+NSE's live-analysis-variations endpoint (see movers.py) — no work needed there. Nobody
+publishes either for SENSEX or any of the global indices, so wherever a real constituent
+list can be gotten without fabricating one, we compute both ourselves from the same
+single batched fetch: pull each constituent's OHLCV via yfinance once per poll cycle,
+then derive breadth (count up/down/flat) and movers (top gainers/losers by % change)
+from that one dataset — not two separate fetches for two features.
 
 Two tiers:
   - Small, hardcoded lists (SENSEX, Dow Jones — 30 stocks each). Stable enough to keep
@@ -20,7 +23,7 @@ Still excluded: Nasdaq Composite (~3000 constituents — no clean free list, and
 count alone makes a single poll cycle impractical on an unauthenticated source),
 KOSPI, TAIEX, Shanghai Composite (no clean full-constituent table found on Wikipedia
 or elsewhere free — a fabricated subset would misrepresent the index, so these stay
-without a breadth line rather than guess).
+without a breadth or movers line rather than guess).
 """
 import threading
 import time
@@ -33,6 +36,7 @@ import yfinance as yf
 CONSTITUENT_POLL_SEC = 60
 LARGE_INDEX_POLL_SEC = 300
 CONSTITUENT_LIST_REFRESH_SEC = 86400  # index membership changes a handful of times a year
+TOP_N_MOVERS = 15
 
 _UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36"}
 
@@ -78,18 +82,23 @@ LARGE_INDEX_SOURCES = {
     },
 }
 
+# Every alias this module can serve breadth/movers for.
+CONSTITUENT_ALIASES = set(SMALL_INDEX_CONSTITUENTS) | set(LARGE_INDEX_SOURCES)
+
 _lock = threading.Lock()
-_cache = {}  # alias -> {"advances", "declines", "unchanged"}
-_list_cache = {}  # alias -> (tickers, fetched_at) — for the Wikipedia-sourced indices
+_breadth_cache = {}  # alias -> {"advances", "declines", "unchanged"}
+_movers_cache = {}   # alias -> {"gainers": [...], "losers": [...]}
+_list_cache = {}     # alias -> (tickers, fetched_at) — for the Wikipedia-sourced indices
 
 
-def summarize(last_two_closes):
-    """Pure counting: {ticker: (prev_close, last_close)} -> {advances, declines, unchanged}.
+def summarize(ohlcv_by_ticker):
+    """Pure counting: {ticker: {"prevClose","last",...} | None} -> breadth counts.
     A ticker with missing/unusable data is skipped, not counted as unchanged."""
     advances = declines = unchanged = 0
-    for prev, last in last_two_closes.values():
-        if prev is None or last is None:
+    for row in ohlcv_by_ticker.values():
+        if row is None:
             continue
+        prev, last = row["prevClose"], row["last"]
         if last > prev:
             advances += 1
         elif last < prev:
@@ -99,16 +108,48 @@ def summarize(last_two_closes):
     return {"advances": advances, "declines": declines, "unchanged": unchanged}
 
 
-def _fetch_last_two_closes(tickers):
-    """One batched yfinance call for all of `tickers` — not one call per stock."""
+def top_movers(ohlcv_by_ticker, n=TOP_N_MOVERS):
+    """Pure ranking: same input as summarize() -> top N gainers/losers by % change,
+    shaped like movers.py's NSE-sourced rows so the frontend renders both identically."""
+    rows = []
+    for ticker, row in ohlcv_by_ticker.items():
+        if row is None or not row["prevClose"]:
+            continue
+        pct = (row["last"] - row["prevClose"]) / row["prevClose"] * 100
+        rows.append({
+            "symbol": ticker.split(".")[0],
+            "ltp": row["last"],
+            "perChange": pct,
+            "open": row["open"],
+            "high": row["high"],
+            "low": row["low"],
+            "volume": row["volume"],
+        })
+    gainers = sorted(rows, key=lambda r: r["perChange"], reverse=True)[:n]
+    losers = sorted(rows, key=lambda r: r["perChange"])[:n]
+    return {"gainers": gainers, "losers": losers}
+
+
+def _fetch_ohlcv(tickers):
+    """One batched yfinance call for all of `tickers` — not one call per stock. Serves
+    both breadth and movers from the same fetch."""
     df = yf.download(tickers, period="5d", interval="1d", progress=False, group_by="ticker", threads=True)
     out = {}
     for t in tickers:
         try:
-            closes = df[t]["Close"].dropna()
-            out[t] = (float(closes.iloc[-2]), float(closes.iloc[-1])) if len(closes) >= 2 else (None, None)
+            sub = df[t].dropna(subset=["Close"])
+            if len(sub) < 2:
+                out[t] = None
+                continue
+            prev_close = float(sub["Close"].iloc[-2])
+            today = sub.iloc[-1]
+            out[t] = {
+                "prevClose": prev_close, "last": float(today["Close"]),
+                "open": float(today["Open"]), "high": float(today["High"]), "low": float(today["Low"]),
+                "volume": int(today["Volume"]) if today["Volume"] == today["Volume"] else None,
+            }
         except (KeyError, IndexError, ValueError, TypeError):
-            out[t] = (None, None)
+            out[t] = None
     return out
 
 
@@ -135,29 +176,32 @@ def _get_constituent_list(alias):
         return cached[0] if cached else []
 
 
-def _update_breadth(alias, tickers):
+def _update_index(alias, tickers):
     if not tickers:
         return
     try:
-        result = summarize(_fetch_last_two_closes(tickers))
+        ohlcv = _fetch_ohlcv(tickers)
+        breadth = summarize(ohlcv)
+        movers = top_movers(ohlcv)
     except Exception:
-        return  # a bad poll must not kill the thread; the cache just keeps its last value
-    if result["advances"] + result["declines"] + result["unchanged"] > 0:
+        return  # a bad poll must not kill the thread; the caches just keep their last value
+    if breadth["advances"] + breadth["declines"] + breadth["unchanged"] > 0:
         with _lock:
-            _cache[alias] = result
+            _breadth_cache[alias] = breadth
+            _movers_cache[alias] = movers
 
 
 def _poll_small():
     while True:
         for alias, tickers in SMALL_INDEX_CONSTITUENTS.items():
-            _update_breadth(alias, tickers)
+            _update_index(alias, tickers)
         time.sleep(CONSTITUENT_POLL_SEC)
 
 
 def _poll_large():
     while True:
         for alias in LARGE_INDEX_SOURCES:
-            _update_breadth(alias, _get_constituent_list(alias))
+            _update_index(alias, _get_constituent_list(alias))
         time.sleep(LARGE_INDEX_POLL_SEC)
 
 
@@ -168,4 +212,11 @@ def start_constituent_poller():
 
 def breadth_rows():
     with _lock:
-        return [{"alias": alias, **data} for alias, data in _cache.items()]
+        return [{"alias": alias, **data} for alias, data in _breadth_cache.items()]
+
+
+def movers_for(alias):
+    """Cached {gainers, losers} for one of CONSTITUENT_ALIASES, or None if not (yet)
+    available — the poller hasn't completed a cycle, or the alias isn't covered here."""
+    with _lock:
+        return _movers_cache.get(alias)

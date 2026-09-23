@@ -11,7 +11,7 @@ Self-hosted charting for Indian and global indices — Flask backend, Lightweigh
 - Charting: 11-index rail, candles/bars/line/area, 1m–1D bars, 1D–All ranges, drag left for older days, SMA 20/50/200, volume, symbol search, a two-point measure tool (click two points, get Δ price/%/time).
 - Cash/futures toggle for SPX/Nasdaq/Dow; options chains for US stocks.
 - Market breadth (advances/declines) under NIFTY, BANK NIFTY, NIFTY IT, SENSEX, DOW JONES, S&P 500 and CSI 300 in the rail. NSE hands the first three out for free; the other four are computed here from each index's own constituents (batched yfinance calls, not a live feed). NASDAQ, KOSPI, TAIEX and Shanghai don't get a line — no accurate free constituent list exists for them, and a guessed subset would misrepresent the index.
-- Top Movers tab: gainers/losers for the whole market, or just NIFTY/BANK NIFTY.
+- Top Movers tab: gainers/losers for the whole market, NIFTY, BANK NIFTY, SENSEX, DOW, S&P 500 or CSI 300 — the last four ranked from the same constituent data the breadth counts above are built from, not a second fetch.
 - Light mode toggle, remembers your choice.
 
 ## Quick start
@@ -65,7 +65,7 @@ flowchart LR
 | `orazio/candles.py` | Shapes yfinance OHLCV data into API rows |
 | `orazio/market_data.py` | Live quote sources (Yahoo/BSE/yfinance/NSE) and the live-bar aggregator built on them |
 | `orazio/cas.py` | Call Auction Session: phase/session logic, NSE index polling, reference-price calc, feed normalization; also NSE-native market breadth for NIFTY/BANK NIFTY/NIFTY IT |
-| `orazio/constituents.py` | Self-computed breadth for SENSEX/DOW/S&P 500/CSI 300 from their own constituents (Wikipedia-scraped lists for the two big ones — not hand-typed); combined with `cas.py`'s into `/api/breadth` |
+| `orazio/constituents.py` | Self-computed breadth AND top movers for SENSEX/DOW/S&P 500/CSI 300 from one shared batched fetch of their own constituents (Wikipedia-scraped lists for the two big ones — not hand-typed); feeds both `/api/breadth` and `/api/movers` |
 | `orazio/movers.py` | Top gainers/losers by universe (whole market, NIFTY, BANK NIFTY) — `/api/movers` |
 | `orazio/nse_client.py` | Shared cookie-authenticated NSE JSON fetcher |
 | `orazio/bse_stream.py` | BSE Socket.IO client, TLS verified against the missing intermediate certificate |
