@@ -45,10 +45,15 @@ def candles():
     df = yf.download(symbol, period=period, interval=interval, progress=False)
     rows = df_to_rows(df)
 
-    # Splice in bars we built ourselves for feeds Yahoo publishes late (SENSEX).
+    # Splice in bars we built ourselves for feeds Yahoo publishes late (SENSEX), or —
+    # when Yahoo returns nothing at all for this period/interval combo (observed: it
+    # intermittently 0-rows `^BSESN` at period=1d while 5d works fine for the same
+    # ticker) — serve our own buffered live bars alone rather than showing "no data"
+    # while a live BSE feed is sitting right there in memory.
     live_added = 0
-    if symbol in market_data.LIVE_BAR_SOURCES and interval in INTERVAL_SECONDS and rows:
-        extra = market_data.live_bars_after(symbol, rows[-1]["time"], INTERVAL_SECONDS[interval])
+    if symbol in market_data.LIVE_BAR_SOURCES and interval in INTERVAL_SECONDS:
+        anchor = rows[-1]["time"] if rows else 0
+        extra = market_data.live_bars_after(symbol, anchor, INTERVAL_SECONDS[interval])
         rows += extra
         live_added = len(extra)
 
