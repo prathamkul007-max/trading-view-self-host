@@ -91,6 +91,7 @@ button { cursor: pointer; }
 .rail-item[aria-current="true"] .rail-sym { color: var(--accent); }
 .rail-breadth { margin-top: 2px; font: 10.5px var(--mono); }
 .rail-breadth .up { margin-right: 6px; }
+.rail-vol { margin-left: 6px; color: var(--text-faint); }
 
 /* ---------- toolbar ---------- */
 .toolbar {

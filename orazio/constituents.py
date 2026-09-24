@@ -108,6 +108,23 @@ def summarize(ohlcv_by_ticker):
     return {"advances": advances, "declines": declines, "unchanged": unchanged}
 
 
+def total_volume(ohlcv_by_ticker):
+    """Combined shares traded across today's available constituents. Not an official
+    'index volume' — indices don't have one (see the ^NSEI/^BSESN Volume=0 columns
+    yfinance itself returns) — just the sum of what yfinance already gives us per
+    constituent while computing breadth/movers, so it costs nothing extra to expose.
+    None (not 0) when no constituent had usable volume, so callers can tell "no data"
+    apart from "genuinely zero volume"."""
+    total = 0
+    counted = 0
+    for row in ohlcv_by_ticker.values():
+        if row is None or row["volume"] is None:
+            continue
+        total += row["volume"]
+        counted += 1
+    return total if counted else None
+
+
 def top_movers(ohlcv_by_ticker, n=TOP_N_MOVERS):
     """Pure ranking: same input as summarize() -> top N gainers/losers by % change,
     shaped like movers.py's NSE-sourced rows so the frontend renders both identically."""
@@ -182,6 +199,7 @@ def _update_index(alias, tickers):
     try:
         ohlcv = _fetch_ohlcv(tickers)
         breadth = summarize(ohlcv)
+        breadth["volume"] = total_volume(ohlcv)
         movers = top_movers(ohlcv)
     except Exception:
         return  # a bad poll must not kill the thread; the caches just keep their last value

@@ -1,4 +1,4 @@
-from orazio.constituents import summarize, top_movers
+from orazio.constituents import summarize, top_movers, total_volume
 
 
 def _row(prev, last, open_=None, high=None, low=None, volume=None):
@@ -48,3 +48,25 @@ def test_top_movers_skips_missing_or_zero_prev_close():
     result = top_movers(data, n=5)
     symbols = {r["symbol"] for r in result["gainers"]} | {r["symbol"] for r in result["losers"]}
     assert symbols == {"A"}
+
+
+def test_total_volume_sums_available_constituents():
+    data = {
+        "A": _row(100.0, 105.0, volume=1000),
+        "B": _row(100.0, 95.0, volume=2500),
+        "C": None,
+    }
+    assert total_volume(data) == 3500
+
+
+def test_total_volume_skips_rows_with_no_volume():
+    # _row()'s volume=None means "use the 1000 default", not "no volume" — build the
+    # no-volume row directly to exercise that case.
+    no_volume_row = {"prevClose": 100.0, "last": 95.0, "open": 100.0, "high": 100.0, "low": 95.0, "volume": None}
+    data = {"A": _row(100.0, 105.0, volume=1000), "B": no_volume_row}
+    assert total_volume(data) == 1000
+
+
+def test_total_volume_none_when_nothing_usable():
+    assert total_volume({"A": None}) is None
+    assert total_volume({}) is None

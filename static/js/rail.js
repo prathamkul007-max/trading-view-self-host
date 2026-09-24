@@ -53,6 +53,13 @@ export async function loadConfig() {
   loadBreadth();
 }
 
+function formatVolume(n) {
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(0) + 'K';
+  return String(n);
+}
+
 // Live advances/declines for the indices NSE publishes it for (see BREADTH_ALIASES).
 export async function loadBreadth() {
   try {
@@ -62,7 +69,11 @@ export async function loadBreadth() {
     for (const row of d.indices) {
       const el = document.querySelector(`.rail-breadth[data-breadth-for="${row.alias}"]`);
       if (!el) continue;
-      el.innerHTML = `<span class="up">▲${row.advances}</span> <span class="down">▼${row.declines}</span>`;
+      // volume is only present for the constituent-computed indices (SENSEX/DOWJONES/
+      // SPX/CHINA) — it's the sum of their constituents' own volume, not a published
+      // "index volume" (indices don't have one), hence the honest label on hover.
+      const vol = row.volume ? `<span class="rail-vol" title="Combined volume of tracked constituents, today so far — not an official index figure">· ${formatVolume(row.volume)}</span>` : '';
+      el.innerHTML = `<span class="up">▲${row.advances}</span> <span class="down">▼${row.declines}</span>${vol}`;
     }
   } catch (e) { /* breadth is a nicety on top of the rail; failing quietly is fine */ }
 }
